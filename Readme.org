@@ -270,7 +270,7 @@ Naming is all over the place.
 
 I do think I am past the point where there are simple things that yield a large speedup, but there are still many things that can be done with regards to making it faster. With regards to leaf nodes, I am pretty sure they are pretty optimal except for the indirection when allocating.
 
-Since most key-value-pairs are in the leaf nodes, we can do the same kind of 32-node thing for internalnodes. We allocate different internal nodes depending on child count, while keeping the data array as a regular array. This would even make them slightly more efficient since we shrink the overhead by 32 bytes (8 bytes less for the array pointer and 24 bytes less for the array header.)
+Since most key-value-pairs are in the leaf nodes, we can do the same kind of 32-node thing for internalnodes. We allocate different internal nodes depending on child count, while keeping the data array as a regular array. This would even make them slightly more efficient since we shrink the overhead by 32 bytes (8 bytes less for the array pointer and 24 bytes less for the array header). This would bring lookup costs down even further. Right now it is about 1.5-2.5x lookup of a mutable dict. That change could bring it down to 1.5-2x.
 
 What I really would like to do is to find a way to do dynamic inline arrays, where I can allocate a Node and tell the GC that there are N*NodePointers at the end. Right now I haven't figured that out.
 
@@ -279,4 +279,4 @@ I think some of the methods could be rewritten to be iterative rather than recur
 * License
 
 
-MPVv2. 
+MPLv2. 
