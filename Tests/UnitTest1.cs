@@ -72,7 +72,7 @@ public class MapTests
         // Perform fast transient mutations
         transient.Add(2, "two");
         transient.Add(3, "three");
-        
+
         Assert.True(transient.TryGetValue(2, out var val));
         Assert.Equal("two", val);
 
@@ -92,26 +92,23 @@ public class MapTests
     public void FuzzTest_DifferentialWithImmutableDictionary()
     {
         // Deterministic seed for reproducible testing sequences
-        var rand = new Random(1337); 
+        var rand = new Random(1337);
         var truth = ImmutableDictionary<int, string>.Empty;
         var map = Map<int, string>.Empty;
 
         const int OperationsCount = 500000;
         var trackedKeys = new List<int>();
 
-        for (int i = 0; i < OperationsCount; i++)
+        for (var i = 0; i < OperationsCount; i++)
         {
-            int op = rand.Next(100);
+            var op = rand.Next(100);
 
             if (op < 55) // 55% Insert/Update mutations
             {
-                int key = rand.Next(1, 20000);
-                string val = $"v_{i}";
+                var key = rand.Next(1, 20000);
+                var val = $"v_{i}";
 
-                if (!truth.ContainsKey(key))
-                {
-                    trackedKeys.Add(key);
-                }
+                if (!truth.ContainsKey(key)) trackedKeys.Add(key);
 
                 truth = truth.SetItem(key, val);
                 map = map.Add(key, val);
@@ -120,8 +117,8 @@ public class MapTests
             {
                 if (trackedKeys.Count > 0)
                 {
-                    int poolIndex = rand.Next(trackedKeys.Count);
-                    int key = trackedKeys[poolIndex];
+                    var poolIndex = rand.Next(trackedKeys.Count);
+                    var key = trackedKeys[poolIndex];
                     trackedKeys.RemoveAt(poolIndex);
 
                     truth = truth.Remove(key);
@@ -131,23 +128,23 @@ public class MapTests
             else // 10% Batch Transient Mutations
             {
                 var transient = map.ToTransient();
-                int batchSize = rand.Next(5, 30);
+                var batchSize = rand.Next(5, 30);
 
-                for (int j = 0; j < batchSize; j++)
+                for (var j = 0; j < batchSize; j++)
                 {
-                    int subOp = rand.Next(2);
+                    var subOp = rand.Next(2);
                     if (subOp == 0) // Add inside transient frame
                     {
-                        int key = rand.Next(20001, 40000); // Disjoint key space
-                        string val = $"t_{i}_{j}";
-                        
+                        var key = rand.Next(20001, 40000); // Disjoint key space
+                        var val = $"t_{i}_{j}";
+
                         transient.Add(key, val);
                         truth = truth.SetItem(key, val);
                     }
                     else if (trackedKeys.Count > 0) // Remove inside transient frame
                     {
-                        int poolIndex = rand.Next(trackedKeys.Count);
-                        int key = trackedKeys[poolIndex];
+                        var poolIndex = rand.Next(trackedKeys.Count);
+                        var key = trackedKeys[poolIndex];
                         trackedKeys.RemoveAt(poolIndex);
 
                         transient.Remove(key);
@@ -159,10 +156,7 @@ public class MapTests
             }
 
             // Periodic verification check across full tree contents
-            if (i % 10000 == 0)
-            {
-                VerifyStateEquality(truth, map);
-            }
+            if (i % 10000 == 0) VerifyStateEquality(truth, map);
         }
 
         // Final thorough validation check
@@ -179,7 +173,7 @@ public class MapTests
         }
 
         // Assert no phantom keys exist in the structure
-        int countedElements = 0;
+        var countedElements = 0;
         foreach (var kvp in map)
         {
             countedElements++;

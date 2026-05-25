@@ -6,9 +6,8 @@
  * Copyright (c) 2025-2026 Linus Björnstam
  *
  */
-using System.Runtime.InteropServices;
 
-#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
+using System.Runtime.InteropServices;
 
 namespace Map;
 
@@ -17,5 +16,4 @@ public abstract class NodeBase
 {
     public ulong Meta;
     public ulong Map;
-    
 }

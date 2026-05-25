@@ -4,6 +4,8 @@ namespace Tests;
 
 public class PersistentMapMergeTests
 {
+    private const int LargeDatasetSize = 33_000;
+
     [Fact]
     public void Merge_WithEmptyMaps_ReturnsCorrectResult()
     {
@@ -106,9 +108,9 @@ public class PersistentMapMergeTests
         var map1 = Map<int, int>.Empty;
         var map2 = Map<int, int>.Empty;
 
-        for (int i = 0; i < 100; i += 2) map1 = map1.Add(i, i);       // Even keys: 0, 2, 4...
-        for (int i = 1; i < 100; i += 2) map2 = map2.Add(i, i * 10);  // Odd keys:  1, 3, 5...
-        
+        for (var i = 0; i < 100; i += 2) map1 = map1.Add(i, i); // Even keys: 0, 2, 4...
+        for (var i = 1; i < 100; i += 2) map2 = map2.Add(i, i * 10); // Odd keys:  1, 3, 5...
+
         // Add one direct conflict key to both
         map1 = map1.Add(500, 500);
         map2 = map2.Add(500, 5000);
@@ -121,14 +123,6 @@ public class PersistentMapMergeTests
         Assert.Equal(20, merged[20]);
         Assert.Equal(210, merged[21]);
         Assert.Equal(5000, merged[500]); // Overwritten by right value
-    }
-
-    // A helper class that forces hash collisions intentionally
-    private class ForcedCollisionComparer : IEqualityComparer<string>
-    {
-        public bool Equals(string? x, string? y) => string.Equals(x, y);
-        // All strings get the same hashcode to force CollisionNode generation
-        public int GetHashCode(string obj) => 42; 
     }
 
     [Fact]
@@ -148,7 +142,7 @@ public class PersistentMapMergeTests
         Assert.Equal(99, merged["KeyB"]); // Handled inside collision loop
         Assert.Equal(3, merged["KeyC"]);
     }
-    
+
     [Fact]
     public void Merge_HashCollisionNodes_WithCustomThunk_ResolvesCorrectly()
     {
@@ -164,8 +158,6 @@ public class PersistentMapMergeTests
         Assert.Equal(3, merged.Count);
         Assert.Equal(5, merged["KeyB"]); // 2 + 3
     }
-    
-    private const int LargeDatasetSize = 33_000;
 
     [Fact]
     public void Merge_LargeTrees_MatchesOracle_PreferRight()
@@ -178,21 +170,18 @@ public class PersistentMapMergeTests
 
         // Build expected oracle state (prefer right: map2 overwrites map1)
         var expectedOracle = new Dictionary<int, int>(oracle1);
-        foreach (var kvp in oracle2)
-        {
-            expectedOracle[kvp.Key] = kvp.Value;
-        }
+        foreach (var kvp in oracle2) expectedOracle[kvp.Key] = kvp.Value;
 
         // Act
         var mergedMap = map1.Merge(map2); // Default strategy (Prefer Right)
 
         // Assert
         Assert.Equal(expectedOracle.Count, mergedMap.Count);
-        
+
         // Verify every single key against the oracle
         foreach (var kvp in expectedOracle)
         {
-            Assert.True(mergedMap.TryGetValue(kvp.Key, out int actualValue), $"Key {kvp.Key} missing from merged map.");
+            Assert.True(mergedMap.TryGetValue(kvp.Key, out var actualValue), $"Key {kvp.Key} missing from merged map.");
             Assert.Equal(kvp.Value, actualValue);
         }
     }
@@ -209,16 +198,10 @@ public class PersistentMapMergeTests
         // Build expected oracle state using the same conflict thunk
         var expectedOracle = new Dictionary<int, int>(oracle1);
         foreach (var kvp in oracle2)
-        {
-            if (expectedOracle.TryGetValue(kvp.Key, out int leftValue))
-            {
+            if (expectedOracle.TryGetValue(kvp.Key, out var leftValue))
                 expectedOracle[kvp.Key] = addResolver(kvp.Key, leftValue, kvp.Value);
-            }
             else
-            {
                 expectedOracle[kvp.Key] = kvp.Value;
-            }
-        }
 
         // Act
         var mergedMap = map1.Merge(map2, addResolver);
@@ -229,26 +212,26 @@ public class PersistentMapMergeTests
         // Verify elements match the sum calculations
         foreach (var kvp in expectedOracle)
         {
-            Assert.True(mergedMap.TryGetValue(kvp.Key, out int actualValue), $"Key {kvp.Key} missing from merged map.");
+            Assert.True(mergedMap.TryGetValue(kvp.Key, out var actualValue), $"Key {kvp.Key} missing from merged map.");
             Assert.Equal(kvp.Value, actualValue);
         }
     }
 
     /// <summary>
-    /// Generates identical datasets across both the CHAMP implementation and a reference BCL Dictionary.
+    ///     Generates identical datasets across both the CHAMP implementation and a reference BCL Dictionary.
     /// </summary>
     private static (Map<int, int> Map, Dictionary<int, int> Oracle) GenerateLargeDataset(
-        int startKey, 
-        int count, 
+        int startKey,
+        int count,
         Func<int, int> valueGenerator)
     {
         var map = Map<int, int>.Empty;
         var oracle = new Dictionary<int, int>(count);
 
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
-            int key = startKey + i;
-            int value = valueGenerator(key);
+            var key = startKey + i;
+            var value = valueGenerator(key);
 
             map = map.Add(key, value);
             oracle[key] = value;
@@ -258,27 +241,39 @@ public class PersistentMapMergeTests
     }
 
     [Fact]
-    public void  MergeOverlap()
+    public void MergeOverlap()
     {
-        Map<int,int> zeromap  = Map<int,int>.Empty;
-        for(int i = 0; i < 20000; i++) {
-            zeromap = zeromap.Add(i, 0);
-        }
+        var zeromap = Map<int, int>.Empty;
+        for (var i = 0; i < 20000; i++) zeromap = zeromap.Add(i, 0);
 
-        var oneMap = Map<int,int>.Empty;
-        for (int i = 10000; i < 30000; i++) {
-            oneMap = oneMap.Add(i, 1);   
-        }
+        var oneMap = Map<int, int>.Empty;
+        for (var i = 10000; i < 30000; i++) oneMap = oneMap.Add(i, 1);
 
         var merged = zeromap.Merge(oneMap, (k, v, v2) => 10);
         Assert.Equal(10, merged[10000]);
 
-        int sum = 0;
-        merged.Iter((k, v) => {
+        var sum = 0;
+        merged.Iter((k, v) =>
+        {
             sum += v;
             return true;
         });
 
         Assert.Equal(110000, sum);
-    } 
+    }
+
+    // A helper class that forces hash collisions intentionally
+    private class ForcedCollisionComparer : IEqualityComparer<string>
+    {
+        public bool Equals(string? x, string? y)
+        {
+            return string.Equals(x, y);
+        }
+
+        // All strings get the same hashcode to force CollisionNode generation
+        public int GetHashCode(string obj)
+        {
+            return 42;
+        }
+    }
 }

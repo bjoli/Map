@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Map\Map.csproj" />
+        <ProjectReference Include="..\Map\Map.csproj"/>
     </ItemGroup>
 
 </Project>

@@ -4,13 +4,12 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
  * Copyright (c) 2026 Linus Björnstam
- * 
+ *
  */
 
 using System.Runtime.InteropServices;
 
 namespace Map;
-
 
 public interface IKeyValueAction<TK, TV>
 {
@@ -27,16 +26,18 @@ internal struct DataSlot<TK, TV>
     public TV Value;
 
     // Helper constructors
-    public static DataSlot<TK, TV> Data(TK key, TV value) => new() { Key = key, Value = value };
+    public static DataSlot<TK, TV> Data(TK key, TV value)
+    {
+        return new DataSlot<TK, TV> { Key = key, Value = value };
+    }
 }
-
 
 [Flags]
 internal enum NodeFlags : byte
 {
     None = 0,
     Internal = 1,
-    Collision = 2,
+    Collision = 2
 }
 
 // This is just a thread safe way to generate ids for the map. id = 0 is reserved for 
@@ -47,20 +48,23 @@ public static class OwnerId
     // it would run out of IDs in about 195 days, if the heat it puts out wouldn't kill it before. 
     private const int BatchSize = 100;
 
+    /// <summary>
+    ///     Represents an invalid / uninitialised OwnerId.
+    /// </summary>
+    public const ulong None = 0;
+
     // The maximum ID that has been reserved globally.
     // Starts at 0, so the first batch reserves IDs 1–100.
     private static long _globalHighWaterMark;
 
     // Per‑thread state: current ID to hand out and how many remain in the local batch.
-    [ThreadStatic]
-    private static long _localCurrentId;
+    [ThreadStatic] private static long _localCurrentId;
 
-    [ThreadStatic]
-    private static int _localRemaining;
+    [ThreadStatic] private static int _localRemaining;
 
     /// <summary>
-    /// Generates the next unique <see cref="ulong"/> OwnerId.
-    /// Mostly non‑blocking (thread‑local), hits <see cref="Interlocked"/> only once per 100 IDs.
+    ///     Generates the next unique <see cref="ulong" /> OwnerId.
+    ///     Mostly non‑blocking (thread‑local), hits <see cref="Interlocked" /> only once per 100 IDs.
     /// </summary>
     public static ulong Next()
     {
@@ -68,7 +72,7 @@ public static class OwnerId
         if (_localRemaining > 0)
         {
             _localRemaining--;
-            long val = ++_localCurrentId;
+            var val = ++_localCurrentId;
             return (ulong)val;
         }
 
@@ -80,10 +84,10 @@ public static class OwnerId
     {
         // Atomically reserve a new block of IDs from the global counter.
         // Only one thread contends for this cache line at a time.
-        long reservedEnd = Interlocked.Add(ref _globalHighWaterMark, BatchSize);
+        var reservedEnd = Interlocked.Add(ref _globalHighWaterMark, BatchSize);
 
         // Calculate the start of our new range.
-        long reservedStart = reservedEnd - BatchSize + 1;
+        var reservedStart = reservedEnd - BatchSize + 1;
 
         // Reset the local cache.
         // _localCurrentId is set to (start - 1) so the very next increment lands on 'reservedStart'.
@@ -92,12 +96,7 @@ public static class OwnerId
 
         // Perform the first generation inside the new batch (same logic as the fast path).
         _localRemaining--;
-        long val = ++_localCurrentId;
+        var val = ++_localCurrentId;
         return (ulong)val;
     }
-
-    /// <summary>
-    /// Represents an invalid / uninitialised OwnerId.
-    /// </summary>
-    public const ulong None = 0;
 }

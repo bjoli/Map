@@ -13,51 +13,50 @@ using System.Runtime.InteropServices;
 
 namespace Map;
 
-
 internal static class NodeOps
 {
     public static (byte capacity, NodeFlags flags, ulong ownerId) UnpackMeta(ulong meta)
     {
-        byte capacity = (byte)(meta & 0xFF);
-        NodeFlags flags = (NodeFlags)((meta >> 8) & 0xFF);
-        ulong ownerId = meta >> 16;
+        var capacity = (byte)(meta & 0xFF);
+        var flags = (NodeFlags)((meta >> 8) & 0xFF);
+        var ownerId = meta >> 16;
         return (capacity, flags, ownerId);
     }
 
     public static byte GetCapacity(ulong meta)
     {
-        return  (byte)(meta & 0xFF);
+        return (byte)(meta & 0xFF);
     }
-    
+
     public static NodeFlags GetFlags(ulong meta)
     {
         return (NodeFlags)((meta >> 8) & 0xFF);
     }
-    
+
     public static ulong GetOwnerId(ulong meta)
     {
         return meta >> 16;
     }
-    
+
     public static ulong PackMeta(byte capacity, NodeFlags flags, ulong ownerId)
     {
         // Masks ownerId to strictly 48 bits before shifting
         return capacity
-               | ((ulong)(byte)flags << 8) 
-               | ((ownerId & 0x0000FFFFFFFFFFFF) << 16); 
+               | ((ulong)(byte)flags << 8)
+               | ((ownerId & 0x0000FFFFFFFFFFFF) << 16);
     }
 
     // This is probably the fastest way I have managed to figure out to do this by now. 
     // Using an array of delegates is not faster, nor is using makeGenericType. If you really
     // want to have a go at making this faster, skip ALL nodes and have one node with a variable tail. 
     // and use some kind of unsafe voodoo. 
-    public static object AllocateLeaf<TK, TV>(byte capacity, NodeFlags flags, ulong owner, ulong map)
+    public static NodeBase AllocateLeaf<TK, TV>(byte capacity, NodeFlags flags, ulong owner, ulong map)
     {
-        ulong meta = PackMeta(capacity, flags, owner);
+        var meta = PackMeta(capacity, flags, owner);
 
         return capacity switch
         {
-            1 => new Node1<TK, TV> { Meta= meta, Map = map },
+            1 => new Node1<TK, TV> { Meta = meta, Map = map },
             2 => new Node2<TK, TV> { Meta = meta, Map = map },
             3 => new Node3<TK, TV> { Meta = meta, Map = map },
             4 => new Node4<TK, TV> { Meta = meta, Map = map },
@@ -92,7 +91,49 @@ internal static class NodeOps
             _ => throw new ArgumentOutOfRangeException(nameof(capacity))
         };
     }
-    
+
+    public static NodeBase AllocateInternal<TK, TV>(byte capacity, NodeFlags flags, ulong owner, ulong map)
+    {
+        var meta = PackMeta(capacity, flags, owner);
+
+        return capacity switch
+        {
+            1 => new InternalNode1<TK, TV> { Meta = meta, Map = map },
+            2 => new InternalNode2<TK, TV> { Meta = meta, Map = map },
+            3 => new InternalNode3<TK, TV> { Meta = meta, Map = map },
+            4 => new InternalNode4<TK, TV> { Meta = meta, Map = map },
+            5 => new InternalNode5<TK, TV> { Meta = meta, Map = map },
+            6 => new InternalNode6<TK, TV> { Meta = meta, Map = map },
+            7 => new InternalNode7<TK, TV> { Meta = meta, Map = map },
+            8 => new InternalNode8<TK, TV> { Meta = meta, Map = map },
+            9 => new InternalNode9<TK, TV> { Meta = meta, Map = map },
+            10 => new InternalNode10<TK, TV> { Meta = meta, Map = map },
+            11 => new InternalNode11<TK, TV> { Meta = meta, Map = map },
+            12 => new InternalNode12<TK, TV> { Meta = meta, Map = map },
+            13 => new InternalNode13<TK, TV> { Meta = meta, Map = map },
+            14 => new InternalNode14<TK, TV> { Meta = meta, Map = map },
+            15 => new InternalNode15<TK, TV> { Meta = meta, Map = map },
+            16 => new InternalNode16<TK, TV> { Meta = meta, Map = map },
+            17 => new InternalNode17<TK, TV> { Meta = meta, Map = map },
+            18 => new InternalNode18<TK, TV> { Meta = meta, Map = map },
+            19 => new InternalNode19<TK, TV> { Meta = meta, Map = map },
+            20 => new InternalNode20<TK, TV> { Meta = meta, Map = map },
+            21 => new InternalNode21<TK, TV> { Meta = meta, Map = map },
+            22 => new InternalNode22<TK, TV> { Meta = meta, Map = map },
+            23 => new InternalNode23<TK, TV> { Meta = meta, Map = map },
+            24 => new InternalNode24<TK, TV> { Meta = meta, Map = map },
+            25 => new InternalNode25<TK, TV> { Meta = meta, Map = map },
+            26 => new InternalNode26<TK, TV> { Meta = meta, Map = map },
+            27 => new InternalNode27<TK, TV> { Meta = meta, Map = map },
+            28 => new InternalNode28<TK, TV> { Meta = meta, Map = map },
+            29 => new InternalNode29<TK, TV> { Meta = meta, Map = map },
+            30 => new InternalNode30<TK, TV> { Meta = meta, Map = map },
+            31 => new InternalNode31<TK, TV> { Meta = meta, Map = map },
+            32 => new InternalNode32<TK, TV> { Meta = meta, Map = map },
+            _ => throw new ArgumentOutOfRangeException(nameof(capacity))
+        };
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Span<DataSlot<TK, TV>> GetLeafDataSpan<TK, TV>(NodeBase node)
     {
@@ -101,5 +142,21 @@ internal static class NodeOps
         ref var first = ref Unsafe.As<LeafSlot1<TK, TV>, DataSlot<TK, TV>>(ref typedNode.Data);
         return MemoryMarshal.CreateSpan(ref first, capacity);
     }
-    
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static DataSlot<TK, TV>[] GetDataArray<TK, TV>(NodeBase node)
+    {
+        // The Data reference is at the exact same memory offset for all InternalNode1..32 types
+        return Unsafe.As<InternalNode1<TK, TV>>(node).Data;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Span<NodeBase> GetChildSpan<TK, TV>(NodeBase node)
+    {
+        int capacity = GetCapacity(node.Meta);
+        var typedNode = Unsafe.As<InternalNode1<TK, TV>>(node);
+        ref var first = ref Unsafe.As<NodeSlot1, NodeBase>(ref typedNode.Children);
+        return MemoryMarshal.CreateSpan(ref first, capacity);
+    }
 }

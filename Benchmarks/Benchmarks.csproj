@@ -8,13 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
-      <PackageReference Include="BenchmarkDotNet.Annotations" Version="0.15.8" />
-      <PackageReference Include="LanguageExt.Core" Version="4.4.9" />
+        <PackageReference Include="BenchmarkDotNet" Version="0.15.8"/>
+        <PackageReference Include="BenchmarkDotNet.Annotations" Version="0.15.8"/>
+        <PackageReference Include="LanguageExt.Core" Version="4.4.9"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Map\Map.csproj" />
+        <ProjectReference Include="..\Map\Map.csproj"/>
     </ItemGroup>
 
 </Project>

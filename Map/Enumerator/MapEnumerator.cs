@@ -42,18 +42,18 @@ public struct MapEnumerator<TK, TV>
         }
     }
 
-    public readonly KeyValuePair<TK, TV> Current 
+    public readonly KeyValuePair<TK, TV> Current
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => new(_current.Key, _current.Value);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
     {
         while (_depth >= 0)
         {
-            ref StackFrame frame = ref _stack[_depth];
+            ref var frame = ref _stack[_depth];
             var flags = NodeOps.GetFlags(frame.Node.Meta);
 
             if (flags == NodeFlags.None)
@@ -61,23 +61,33 @@ public struct MapEnumerator<TK, TV>
                 int capacity = NodeOps.GetCapacity(frame.Node.Meta);
                 if (frame.DataIndex < capacity)
                 {
-                    _current = NodeOps.GetLeafDataSpan<TK, TV>(frame.Node)[frame.DataIndex++];
+                    // Bypass GetLeafDataSpan completely using raw ref arithmetic
+                    ref var firstSlot = ref Unsafe.As<LeafSlot1<TK, TV>, DataSlot<TK, TV>>(ref Unsafe.As<Node1<TK, TV>>(frame.Node).Data);
+                    _current = Unsafe.Add(ref firstSlot, frame.DataIndex++);
                     return true;
                 }
             }
             else if (flags == NodeFlags.Internal)
             {
-                var internalNode = Unsafe.As<InternalNode<TK, TV>>(frame.Node);
-                
-                if (frame.DataIndex < internalNode.Data.Length)
+                var dataArray = NodeOps.GetDataArray<TK, TV>(frame.Node);
+
+                if (frame.DataIndex < dataArray.Length)
                 {
-                    _current = internalNode.Data[frame.DataIndex++];
+                    _current = dataArray[frame.DataIndex++];
                     return true;
                 }
-                
-                if (frame.NodeIndex < internalNode.Nodes.Length)
+
+                // Read the child capacity directly from Meta instead of checking childSpan.Length
+                int childCapacity = NodeOps.GetCapacity(frame.Node.Meta);
+
+                if (frame.NodeIndex < childCapacity)
                 {
-                    _stack[_depth + 1] = new StackFrame { Node = internalNode.Nodes[frame.NodeIndex++], DataIndex = 0, NodeIndex = 0 };
+                    // Bypass GetChildSpan completely using raw pointer/ref arithmetic
+                    ref var firstChild = ref Unsafe.As<NodeSlot1, NodeBase>(ref Unsafe.As<InternalNode1<TK, TV>>(frame.Node).Children);
+                    var nextChild = Unsafe.Add(ref firstChild, frame.NodeIndex++);
+
+                    _stack[_depth + 1] = new StackFrame
+                        { Node = nextChild, DataIndex = 0, NodeIndex = 0 };
                     _depth++;
                     continue;
                 }
@@ -97,4 +107,4 @@ public struct MapEnumerator<TK, TV>
 
         return false;
     }
-}
+    }

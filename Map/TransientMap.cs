@@ -13,10 +13,10 @@ namespace Map;
 
 public sealed class TransientMap<TK, TV>
 {
-    private NodeBase? _root;
     private readonly IEqualityComparer<TK> _comparer;
-    private ulong _ownerId;
     private int _count;
+    private ulong _ownerId;
+    private NodeBase? _root;
 
     internal TransientMap(NodeBase? root, IEqualityComparer<TK> comparer)
     {
@@ -25,7 +25,7 @@ public sealed class TransientMap<TK, TV>
         _ownerId = OwnerId.Next();
         _count = 0;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(TK key, out TV value)
     {
@@ -35,23 +35,23 @@ public sealed class TransientMap<TK, TV>
             return false;
         }
 
-        int hash = _comparer.GetHashCode(key!);
+        var hash = _comparer.GetHashCode(key!);
         return TrieOps.TryGetValue(_root, key, hash, _comparer, out value);
     }
 
     public void Add(TK key, TV value)
     {
-        int hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
-        _root = TrieOps.InsertTransient(_root, key, value, hash, 0, _comparer, _ownerId, out bool added);
+        var hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
+        _root = TrieOps.InsertTransient(_root, key, value, hash, 0, _comparer, _ownerId, out var added);
         if (added) _count++;
     }
-    
+
     public void Remove(TK key)
     {
         if (_root == null) return;
 
-        int hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
-        _root = TrieOps.RemoveTransient<TK,TV>(_root, key, hash, 0, _comparer, out bool removed, _ownerId);
+        var hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
+        _root = TrieOps.RemoveTransient<TK, TV>(_root, key, hash, 0, _comparer, out var removed, _ownerId);
         if (removed) _count--;
     }
 
