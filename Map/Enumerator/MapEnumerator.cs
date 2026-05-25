@@ -4,6 +4,7 @@
  * I don't think I can make any kind of copyright claims at all.
  */
 
+using System.Collections;
 using System.Runtime.CompilerServices;
 
 namespace Map;
@@ -21,7 +22,7 @@ internal struct EnumeratorStack
     private StackFrame _element0;
 }
 
-public struct MapEnumerator<TK, TV>
+public struct MapEnumerator<TK, TV> : IEnumerator<KeyValuePair<TK, TV>>
 {
     private EnumeratorStack _stack;
     private int _depth;
@@ -47,6 +48,8 @@ public struct MapEnumerator<TK, TV>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => new(_current.Key, _current.Value);
     }
+    
+    readonly object IEnumerator.Current => Current;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -107,4 +110,14 @@ public struct MapEnumerator<TK, TV>
 
         return false;
     }
+    
+    
+    public readonly void Dispose()
+    {
     }
+
+    public void Reset()
+    {
+        throw new NotSupportedException();
+    }
+}

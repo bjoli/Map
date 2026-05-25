@@ -7,11 +7,16 @@
  *
  */
 
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 
 namespace Map;
 
-public sealed class Map<TK, TV>
+public sealed class Map<TK, TV> : 
+    IReadOnlyDictionary<TK, TV>, 
+    //IImmutableDictionary<TK, TV>,
+    //IEquatable<Map<TK, TV>>,
+    IEnumerable<KeyValuePair<TK,TV>> where TK : notnull
 {
     public static readonly Map<TK, TV> Empty = new(null, EqualityComparer<TK>.Default);
     private readonly IEqualityComparer<TK> _comparer;
@@ -50,6 +55,7 @@ public sealed class Map<TK, TV>
     public bool IsEmpty => Count == 0;
 
     public TV this[TK key] => Get(key);
+    
 
     public bool ContainsKey(TK key)
     {
@@ -148,12 +154,6 @@ public sealed class Map<TK, TV>
         return new TransientMap<TK, TV>(Root, _comparer);
     }
 
-    public MapEnumerator<TK, TV> GetEnumerator()
-    {
-        return new MapEnumerator<TK, TV>(Root);
-    }
-
-
     /// <summary>
     ///     Executes a delegate on the elements of the map
     /// </summary>
@@ -164,6 +164,11 @@ public sealed class Map<TK, TV>
         return TrieOps.Iter<TK, TV>(Root, action);
     }
 
+    /// <summary>
+    ///     Filters the map, retaining only elements that satisfy the specified predicate.
+    /// </summary>
+    /// <param name="action">A function to test each value for a condition.</param>
+    /// <returns>A new <see cref="Map{TK, TV}"/> containing the elements that satisfy the condition.</returns>
     public Map<TK, TV> Filter(Func<TV, TV, bool> action)
     {
         var builder = new MapBuilder<TK, TV>(_comparer);
@@ -175,7 +180,14 @@ public sealed class Map<TK, TV>
         return builder.ToImmutable();
     }
 
-
+    /// <summary>
+    ///     Transforms the elements of the map using the specified function.
+    /// </summary>
+    /// <typeparam name="NK">The type of the new keys.</typeparam>
+    /// <typeparam name="NV">The type of the new values.</typeparam>
+    /// <param name="action">A function to transform each key-value pair.</param>
+    /// <param name="comparer">An optional equality comparer for the new keys.</param>
+    /// <returns>A new <see cref="Map{NK, NV}"/> containing the transformed elements.</returns>
     public Map<NK, NV> MapCar<NK, NV>(Func<TK, TV, (NK, NV)> action, IEqualityComparer<NK>? comparer = null)
     {
         var builder = new MapBuilder<NK, NV>(comparer);
@@ -189,6 +201,13 @@ public sealed class Map<TK, TV>
         return builder.ToImmutable();
     }
 
+    /// <summary>
+    ///     Aggregates the values of the map using the specified function.
+    /// </summary>
+    /// <typeparam name="TState">The type of the accumulator state.</typeparam>
+    /// <param name="seed">The initial accumulator value.</param>
+    /// <param name="action">A function to aggregate the state and each value.</param>
+    /// <returns>The final accumulated state.</returns>
     public TState FoldValues<TState>(TState seed, Func<TState, TV, TState> action)
     {
         Iter((_, v) =>
@@ -198,12 +217,40 @@ public sealed class Map<TK, TV>
         });
         return seed;
     }
+    
+    /// <summary>
+    ///     Aggregates the keys of the map using the specified function.
+    /// </summary>
+    /// <typeparam name="TState">The type of the accumulator state.</typeparam>
+    /// <param name="seed">The initial accumulator value.</param>
+    /// <param name="action">A function to aggregate the state and each key.</param>
+    /// <returns>The final accumulated state.</returns>
+    public TState FoldKeys<TState>(TState seed, Func<TState, TK, TState> action)
+    {
+        Iter((k, _) =>
+        {
+            seed = action(seed, k);
+            return true;
+        });
+        return seed;
+    }
 
+    /// <summary>
+    ///     Determines whether the map contains elements that satisfy the specified predicate.
+    /// </summary>
+    /// <param name="pred">A function to test each element for a condition.</param>
+    /// <returns><c>true</c> if the map contains an element that satisfies the condition; otherwise, <c>false</c>.</returns>
     public bool Exists(Func<TK, TV, bool> pred)
     {
         return Iter((k, v) => { return !pred(k, v); });
     }
 
+    /// <summary>
+    ///     Finds the first key in the map that satisfies the specified predicate.
+    /// </summary>
+    /// <param name="pred">A function to test each key for a condition.</param>
+    /// <returns>The key that satisfies the condition.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown if no key satisfies the condition.</exception>
     public TK FindKey(Func<TK, bool> pred)
     {
         var key = default(TK);
@@ -225,6 +272,10 @@ public sealed class Map<TK, TV>
         return key;
     }
 
+    /// <summary>
+    ///     Executes the specified action on each element of the map.
+    /// </summary>
+    /// <param name="action">The action to execute on each key-value pair.</param>
     public void ForEach(Action<TK, TV> action)
     {
         Iter((k, v) =>
@@ -245,7 +296,11 @@ public sealed class Map<TK, TV>
         return TrieOps.IterFast<TK, TV, TAction>(Root, ref action);
     }
 
-
+    /// <summary>
+    ///     Creates a transient version of the map, applies the specified mutation action, and returns an immutable map.
+    /// </summary>
+    /// <param name="action">The action to apply to the transient map.</param>
+    /// <returns>A new <see cref="Map{TK, TV}"/> with the mutations applied.</returns>
     public Map<TK, TV> Mutate(Action<TransientMap<TK, TV>> action)
     {
         var transient = ToTransient();
@@ -290,4 +345,20 @@ public sealed class Map<TK, TV>
 
         return new Map<TK, TV>(newRoot, _comparer, counter);
     }
+    
+    public MapEnumerator<TK, TV> GetEnumerator() => new MapEnumerator<TK, TV>(Root);
+
+    // Explicit implementering för att tillfredsställa gränssnitten
+    IEnumerator<KeyValuePair<TK, TV>> IEnumerable<KeyValuePair<TK, TV>>.GetEnumerator() => 
+        new MapEnumerator<TK, TV>(Root);
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => 
+        new MapEnumerator<TK, TV>(Root);
+    
+    public MapKeyCollection<TK, TV> Keys => new(Root, Count);
+    public MapValueCollection<TK, TV> Values => new(Root, Count);
+
+    // Explicit implementering för att tillfredsställa gränssnittets kontrakt
+    IEnumerable<TK> IReadOnlyDictionary<TK, TV>.Keys => Keys;
+    IEnumerable<TV> IReadOnlyDictionary<TK, TV>.Values => Values;
 }

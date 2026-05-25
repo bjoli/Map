@@ -883,7 +883,7 @@ internal static partial class TrieOps
         return resultNode;
     }
 
-
+    
     public static bool Iter<TK, TV>(NodeBase? node, Func<TK, TV, bool> action)
     {
         if (node == null) return true;
