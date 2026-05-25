@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Map", "Map\Map.csproj", "{A2849868-A7C5-42DE-9BAC-437B3C69F329}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlayGround", "PlayGround\PlayGround.csproj", "{5A4E8269-5EB3-4847-8048-92C42CEB6B5D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{4B7FE816-6FD1-4FC9-B9D1-822EF499A37F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{A336B1FD-7790-4887-A742-FA6A3A9DD7CE}"
@@ -18,10 +16,6 @@ Global
 		{A2849868-A7C5-42DE-9BAC-437B3C69F329}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2849868-A7C5-42DE-9BAC-437B3C69F329}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A2849868-A7C5-42DE-9BAC-437B3C69F329}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5A4E8269-5EB3-4847-8048-92C42CEB6B5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5A4E8269-5EB3-4847-8048-92C42CEB6B5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5A4E8269-5EB3-4847-8048-92C42CEB6B5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5A4E8269-5EB3-4847-8048-92C42CEB6B5D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4B7FE816-6FD1-4FC9-B9D1-822EF499A37F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4B7FE816-6FD1-4FC9-B9D1-822EF499A37F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4B7FE816-6FD1-4FC9-B9D1-822EF499A37F}.Release|Any CPU.ActiveCfg = Release|Any CPU

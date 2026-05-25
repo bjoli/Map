@@ -1,11 +1,3 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at https://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2025-2026 Linus Björnstam
- *
- */
 
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -117,34 +109,6 @@ internal struct LeafSlot31<TK, TV> { private DataSlot<TK, TV> _element0; }
 
 [InlineArray(32)]
 internal struct LeafSlot32<TK, TV> { private DataSlot<TK, TV> _element0; }
-
-[StructLayout(LayoutKind.Sequential)]
-public abstract class NodeBase
-{
-    public ulong Meta;
-    public ulong Map;
-    
-}
-// New Internal Node for branches
-internal sealed class InternalNode<TK, TV> : NodeBase
-{
-    public  DataSlot<TK, TV>[] Data;
-    public  NodeBase[] Nodes;
-
-    public InternalNode(DataSlot<TK, TV>[] data, NodeBase[] nodes)
-    {
-        Data = data;
-        Nodes = nodes;
-        Meta = NodeOps.PackMeta(0, NodeFlags.Internal, 0);
-    }
-
-    public InternalNode(DataSlot<TK, TV>[] data, NodeBase[] nodes, ulong owner)
-    {
-        Data = data;
-        Nodes = nodes;
-        Meta = NodeOps.PackMeta(0, NodeFlags.Internal, owner);
-    }
-}
 
 
 
@@ -338,25 +302,4 @@ internal sealed class Node31<TK, TV> : NodeBase
 internal sealed class Node32<TK, TV> : NodeBase
 {
     public LeafSlot32<TK, TV> Data;
-}
-
-internal sealed class CollisionNode<TK, TV> : NodeBase
-{
-    public DataSlot<TK, TV>[] Slots;
-
-    public CollisionNode(DataSlot<TK, TV>[] slots)
-    {
-        Slots = slots;
-        // capacity is not used by colissionnodes.
-        Meta = NodeOps.PackMeta(0, NodeFlags.Collision, 0);
-    }
-    
-    public CollisionNode(DataSlot<TK, TV>[] slots, ulong ownerId)
-    {
-        Slots = slots;
-        // capacity is not used by colissionnodes.
-        Meta = NodeOps.PackMeta(0, NodeFlags.Collision, ownerId);
-    }
-    
-    
 }
