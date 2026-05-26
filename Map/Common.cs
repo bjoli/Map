@@ -11,10 +11,6 @@ using System.Runtime.InteropServices;
 
 namespace Map;
 
-public interface IKeyValueAction<TK, TV>
-{
-    bool Invoke(TK key, TV value);
-}
 
 // This should not be needed, since dotnet does pack things along boundaries. 
 // I had a weird edge case though, where a small value type and a reference type ended up with the pointer 
@@ -42,7 +38,7 @@ internal enum NodeFlags : byte
 
 // This is just a thread safe way to generate ids for the map. id = 0 is reserved for 
 // immutable objects.
-public static class OwnerId
+internal static class OwnerId
 {
     // This is a pretty conservative batch size. If I set my 16 core 9950x processor to waste as many IDs at it can
     // it would run out of IDs in about 195 days, if the heat it puts out wouldn't kill it before. 

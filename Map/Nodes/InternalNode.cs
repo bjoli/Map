@@ -209,223 +209,223 @@ internal struct NodeSlot32
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode1<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot1 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode2<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot2 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode3<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot3 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode4<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot4 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode5<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot5 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode6<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot6 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode7<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot7 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode8<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot8 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode9<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot9 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode10<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot10 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode11<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot11 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode12<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot12 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode13<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot13 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode14<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot14 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode15<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot15 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode16<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot16 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode17<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot17 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode18<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot18 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode19<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot19 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode20<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot20 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode21<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot21 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode22<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot22 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode23<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot23 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode24<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot24 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode25<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot25 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode26<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot26 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode27<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot27 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode28<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot28 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode29<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot29 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode30<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot30 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode31<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot31 Children;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal sealed class InternalNode32<TK, TV> : NodeBase
 {
-    public DataSlot<TK, TV>[] Data;
+    public DataSlot<TK, TV>[]? Data;
     public NodeSlot32 Children;
 }

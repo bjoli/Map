@@ -54,7 +54,6 @@ public readonly struct MapKeyCollection<TK, TV> : IReadOnlyCollection<TK>
 
     public int Count => _count;
 
-    // Returnerar den allokeringsfria structen för foreach
     public MapKeyEnumerator<TK, TV> GetEnumerator() => new(_root);
 
     IEnumerator<TK> IEnumerable<TK>.GetEnumerator() => new MapKeyEnumerator<TK, TV>(_root);
@@ -74,7 +73,6 @@ public readonly struct MapValueCollection<TK, TV> : IReadOnlyCollection<TV>
 
     public int Count => _count;
 
-    // Returnerar den allokeringsfria structen för foreach
     public MapValueEnumerator<TK, TV> GetEnumerator() => new(_root);
 
     IEnumerator<TV> IEnumerable<TV>.GetEnumerator() => new MapValueEnumerator<TK, TV>(_root);

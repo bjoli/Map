@@ -41,7 +41,7 @@ internal struct BuilderEntry<TK, TV>
 ///     It's more efficient to add items to this builder first and then
 ///     convert it to a Map in one go, rather than creating a new Map for each addition.
 /// </summary>
-public sealed class MapBuilder<TK, TV>
+public sealed class MapBuilder<TK, TV> where TK : notnull
 {
     private readonly IEqualityComparer<TK> _comparer;
     private int _count;
@@ -71,7 +71,7 @@ public sealed class MapBuilder<TK, TV>
         // Calculate the hash for the key and store the entry.
         _entries[_count] = new BuilderEntry<TK, TV>
         {
-            Hash = _comparer.GetHashCode(key!),
+            Hash = _comparer.GetHashCode(key),
             Key = key,
             Value = value
         };

@@ -78,20 +78,19 @@ internal static partial class TrieOps
 
         if ((dataMap & bitpos) != 0)
         {
-            // Hämta arrayen först här när vi garanterat vet att vi ska läsa den
             var dataArray = NodeOps.GetDataArray<TK, TV>(node);
-            ref var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray), dataIdx);
+            ref var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray!), dataIdx);
 
             if (comparer.Equals(slot.Key, key))
             {
                 added = false;
                 if (isMutable)
                 {
-                    slot.Value = value; // Skriv direkt till referensen (inga gränskontroller eller omräkningar)
+                    slot.Value = value; 
                     return node;
                 }
 
-                var newData = new DataSlot<TK, TV>[dataArray.Length];
+                var newData = new DataSlot<TK, TV>[dataArray!.Length];
                 dataArray.AsSpan().CopyTo(newData);
                 newData[dataIdx] = new DataSlot<TK, TV> { Key = key, Value = value };
                 
@@ -105,7 +104,7 @@ internal static partial class TrieOps
             var subNode = MergeDataSlots(slot, key, value, hash, shift + 5, comparer, ownerId);
             var newMap = ((ulong)(nodeMap | bitpos) << 32) | (dataMap & ~bitpos);
 
-            var shrunkData = new DataSlot<TK, TV>[dataArray.Length - 1];
+            var shrunkData = new DataSlot<TK, TV>[dataArray!.Length - 1];
             dataArray.AsSpan(0, dataIdx).CopyTo(shrunkData);
             dataArray.AsSpan(dataIdx + 1).CopyTo(shrunkData.AsSpan(dataIdx));
 
@@ -135,12 +134,12 @@ internal static partial class TrieOps
             if (isMutable)
             {
                 Unsafe.Add(ref firstChild, nodeIdx) = newChildNode;
-                return node; // dataArray rördes aldrig, noll stack-spilling har skett!
+                return node; 
             }
 
             if (ReferenceEquals(childNode, newChildNode)) return node;
 
-            // Endast vid kopiering hämtar vi dataArray efter det rekursiva anropet
+           
             var dataArray = NodeOps.GetDataArray<TK, TV>(node);
             byte childCap = NodeOps.GetCapacity(node.Meta);
             var newNodeObj = NodeOps.AllocateInternal<TK, TV>(childCap, NodeFlags.Internal, ownerId, node.Map);
@@ -156,7 +155,7 @@ internal static partial class TrieOps
         // Empty slot
         added = true;
         var currentData = NodeOps.GetDataArray<TK, TV>(node);
-        var appendedData = new DataSlot<TK, TV>[currentData.Length + 1];
+        var appendedData = new DataSlot<TK, TV>[currentData!.Length + 1];
         currentData.AsSpan(0, dataIdx).CopyTo(appendedData);
         appendedData[dataIdx] = new DataSlot<TK, TV> { Key = key, Value = value };
         currentData.AsSpan(dataIdx).CopyTo(appendedData.AsSpan(dataIdx + 1));
@@ -187,7 +186,7 @@ internal static partial class TrieOps
             added = false;
             if (isMutable)
             {
-                existingSlot.Value = value; // Direktmutation via ref
+                existingSlot.Value = value;
                 return node;
             }
 
@@ -280,7 +279,7 @@ internal static partial class TrieOps
             if ((dataMap & bitpos) != 0)
             {
                 var dataIdx = BitOperations.PopCount(dataMap & (bitpos - 1));
-                ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray), dataIdx);
+                ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray!), dataIdx);
 
                 if (comparer.Equals(slot.Key, key))
                 {
@@ -288,7 +287,7 @@ internal static partial class TrieOps
                     var newMap = node.Map & ~(ulong)bitpos;
                     var childCap = NodeOps.GetCapacity(node.Meta);
 
-                    var newData = new DataSlot<TK, TV>[dataArray.Length - 1];
+                    var newData = new DataSlot<TK, TV>[dataArray!.Length - 1];
                     dataArray.AsSpan(0, dataIdx).CopyTo(newData);
                     dataArray.AsSpan(dataIdx + 1).CopyTo(newData.AsSpan(dataIdx));
 
@@ -333,7 +332,7 @@ internal static partial class TrieOps
 
                     if (childCap == 1)
                     {
-                        if (dataArray.Length == 0) return null;
+                        if (dataArray == null || dataArray.Length == 0) return null;
 
                         var leaf = NodeOps.AllocateLeaf<TK, TV>((byte)dataArray.Length, NodeFlags.None,
                             ownerId, newMap);
@@ -362,7 +361,7 @@ internal static partial class TrieOps
                         var newMap = (node.Map & ~((ulong)bitpos << 32)) | bitpos;
                         var newDataIdx = BitOperations.PopCount((uint)newMap & (bitpos - 1));
 
-                        var newData = new DataSlot<TK, TV>[dataArray.Length + 1];
+                        var newData = new DataSlot<TK, TV>[dataArray!.Length + 1];
                         dataArray.AsSpan(0, newDataIdx).CopyTo(newData);
                         newData[newDataIdx] = singleData;
                         dataArray.AsSpan(newDataIdx).CopyTo(newData.AsSpan(newDataIdx + 1));

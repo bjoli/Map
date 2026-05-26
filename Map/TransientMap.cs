@@ -15,7 +15,7 @@ namespace Map;
 /// A mutable, transient version of a <see cref="Map{TK, TV}"/> that can be efficiently modified
 /// before being converted back to an immutable map.
 /// </summary>
-public sealed class TransientMap<TK, TV>
+public sealed class TransientMap<TK, TV> where TK : notnull
 {
     private readonly IEqualityComparer<TK> _comparer;
     private int _count;
@@ -48,7 +48,7 @@ public sealed class TransientMap<TK, TV>
             return false;
         }
 
-        var hash = _comparer.GetHashCode(key!);
+        var hash = _comparer.GetHashCode(key);
         return TrieOps.TryGetValue(_root, key, hash, _comparer, out value);
     }
 

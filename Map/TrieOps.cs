@@ -91,14 +91,14 @@ internal static partial class TrieOps
             if ((dataMap & bitpos) != 0)
             {
                 ref readonly var existingSlot =
-                    ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray), dataIdx);
+                    ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray!), dataIdx);
 
                 if (comparer.Equals(existingSlot.Key, key))
                 {
                     added = false;
                     if (EqualityComparer<TV>.Default.Equals(existingSlot.Value, value)) return node;
 
-                    var newData0 = new DataSlot<TK, TV>[dataArray.Length];
+                    var newData0 = new DataSlot<TK, TV>[dataArray!.Length];
                     dataArray.AsSpan().CopyTo(newData0);
                     newData0[dataIdx] = new DataSlot<TK, TV> { Key = key, Value = value };
 
@@ -116,7 +116,7 @@ internal static partial class TrieOps
                 var subNode = MergeDataSlots(existingSlot, key, value, hash, shift + 5, comparer);
                 var newMap = ((ulong)(nodeMap | bitpos) << 32) | (dataMap & ~bitpos);
 
-                var newData = new DataSlot<TK, TV>[dataArray.Length - 1];
+                var newData = new DataSlot<TK, TV>[dataArray!.Length - 1];
                 dataArray.AsSpan(0, dataIdx).CopyTo(newData);
                 dataArray.AsSpan(dataIdx + 1).CopyTo(newData.AsSpan(dataIdx));
 
@@ -163,7 +163,7 @@ internal static partial class TrieOps
 
             // Empty slot
             added = true;
-            var appendedData = new DataSlot<TK, TV>[dataArray.Length + 1];
+            var appendedData = new DataSlot<TK, TV>[dataArray!.Length + 1];
             dataArray.AsSpan(0, dataIdx).CopyTo(appendedData);
             appendedData[dataIdx] = new DataSlot<TK, TV> { Key = key, Value = value };
             dataArray.AsSpan(dataIdx).CopyTo(appendedData.AsSpan(dataIdx + 1));
@@ -245,11 +245,10 @@ internal static partial class TrieOps
 
         // 1. Full 32-bit hash collision
         if (existingHash == newHash)
-            return new CollisionNode<TK, TV>(new[]
-            {
+            return new CollisionNode<TK, TV>([
                 existingSlot,
                 new DataSlot<TK, TV> { Key = newKey, Value = newValue }
-            }, ownerId);
+            ], ownerId);
 
         var existingBit = (existingHash >> shift) & 0x1F;
         var newBit = (newHash >> shift) & 0x1F;
@@ -326,7 +325,7 @@ internal static partial class TrieOps
                     var dataIdx = BitOperations.PopCount(dataMap & (bitpos - 1));
                     var dataArray = NodeOps.GetDataArray<TK, TV>(current);
 
-                    ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray), dataIdx);
+                    ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray!), dataIdx);
 
                     if (comparer.Equals(slot.Key, key))
                     {
@@ -429,7 +428,7 @@ internal static partial class TrieOps
             {
                 var dataIdx = BitOperations.PopCount(dataMap & (bitpos - 1));
 
-                ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray), dataIdx);
+                ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray!), dataIdx);
 
                 if (comparer.Equals(slot.Key, key))
                 {
@@ -437,7 +436,7 @@ internal static partial class TrieOps
                     var newMap = node.Map & ~(ulong)bitpos;
                     var childCap = NodeOps.GetCapacity(node.Meta);
 
-                    if (dataArray.Length == 1 && childCap == 0)
+                    if (dataArray!.Length == 1 && childCap == 0)
                         return null;
 
                     var newData = new DataSlot<TK, TV>[dataArray.Length - 1];
@@ -486,7 +485,7 @@ internal static partial class TrieOps
 
                     if (childCap == 1)
                     {
-                        if (dataArray.Length == 0) return null;
+                        if (dataArray!.Length == 0) return null;
 
                         var leaf = NodeOps.AllocateLeaf<TK, TV>((byte)dataArray.Length, NodeFlags.None, 0, newMap);
                         dataArray.CopyTo(NodeOps.GetLeafDataSpan<TK, TV>(leaf));
@@ -517,7 +516,7 @@ internal static partial class TrieOps
                         var newMap = (node.Map & ~((ulong)bitpos << 32)) | bitpos;
                         var newDataIdx = BitOperations.PopCount((uint)newMap & (bitpos - 1));
 
-                        var newData = new DataSlot<TK, TV>[dataArray.Length + 1];
+                        var newData = new DataSlot<TK, TV>[dataArray!.Length + 1];
                         dataArray.AsSpan(0, newDataIdx).CopyTo(newData);
                         newData[newDataIdx] = singleData;
                         dataArray.AsSpan(newDataIdx).CopyTo(newData.AsSpan(newDataIdx + 1));
@@ -762,15 +761,15 @@ internal static partial class TrieOps
                 if (comparer.Equals(d1.Key, d2.Key))
                 {
                     var resolvedVal = conflictResolver != null
-                        ? conflictResolver(d1.Key, d1.Value, d2.Value)
+                        ? conflictResolver(d1.Key!, d1.Value!, d2.Value!)
                         : d2.Value;
-                    pooledData[dataCount++] = DataSlot<TK, TV>.Data(d1.Key, resolvedVal);
+                    pooledData[dataCount++] = DataSlot<TK, TV>.Data(d1.Key!, resolvedVal!);
                     finalDataMap |= bitpos;
                 }
                 else
                 {
                     var h2 = comparer.GetHashCode(d2.Key!);
-                    var subNode = MergeDataSlots(d1, d2.Key, d2.Value, h2, shift + 5, comparer);
+                    var subNode = MergeDataSlots(d1!, d2.Key, d2.Value, h2, shift + 5, comparer!);
                     pooledNodes[nodeCount++] = subNode;
                     finalNodeMap |= bitpos;
                 }
@@ -882,15 +881,14 @@ internal static partial class TrieOps
 
         // CollisionNode
         var colNode = Unsafe.As<CollisionNode<TK, TV>>(node);
-        var slots = colNode.Slots;
-        if (slots != null)
-        {
+        DataSlot<TK,TV>[] slots = colNode.Slots;
+        
             for (var i = 0; i < slots.Length; i++)
             {
                 if (!action(slots[i].Key, slots[i].Value))
                     return false;
             }
-        }
+        
 
         return true;
     }

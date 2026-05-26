@@ -145,7 +145,7 @@ internal static class NodeOps
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static DataSlot<TK, TV>[] GetDataArray<TK, TV>(NodeBase node)
+    public static DataSlot<TK, TV>[]? GetDataArray<TK, TV>(NodeBase node)
     {
         // The Data reference is at the exact same memory offset for all InternalNode1..32 types
         return Unsafe.As<InternalNode1<TK, TV>>(node).Data;

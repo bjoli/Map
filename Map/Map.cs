@@ -7,16 +7,15 @@
  *
  */
 
-using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 
 namespace Map;
 
 public sealed class Map<TK, TV> : 
-    IReadOnlyDictionary<TK, TV>, 
+    IReadOnlyDictionary<TK, TV>
     //IImmutableDictionary<TK, TV>,
     //IEquatable<Map<TK, TV>>,
-    IEnumerable<KeyValuePair<TK,TV>> where TK : notnull
+    where TK : notnull
 {
     public static readonly Map<TK, TV> Empty = new(null, EqualityComparer<TK>.Default);
     private readonly IEqualityComparer<TK> _comparer;
@@ -71,7 +70,7 @@ public sealed class Map<TK, TV> :
             return false;
         }
 
-        var hash = _comparer.GetHashCode(key!);
+        var hash = _comparer.GetHashCode(key);
         return TrieOps.TryGetValue(Root, key, hash, _comparer, out value);
     }
 
@@ -84,7 +83,7 @@ public sealed class Map<TK, TV> :
 
     public Map<TK, TV> Add(TK key, TV value)
     {
-        var hash = _comparer.GetHashCode(key!);
+        var hash = _comparer.GetHashCode(key);
         var newRoot = TrieOps.Insert(Root, key, value, hash, 0, _comparer, out var added);
 
         // If nothing was added NOR CHANGED, we can just return the same persistentmap
@@ -98,8 +97,8 @@ public sealed class Map<TK, TV> :
     {
         if (Root == null) return this;
 
-        var hash = _comparer.GetHashCode(key!);
-        var newRoot = TrieOps.Remove<TK, TV>(Root!, key!, hash, 0, _comparer, out var removed);
+        var hash = _comparer.GetHashCode(key);
+        var newRoot = TrieOps.Remove<TK, TV>(Root!, key, hash, 0, _comparer, out var removed);
 
         if (!removed) return this;
 
@@ -140,7 +139,7 @@ public sealed class Map<TK, TV> :
         // XOR is commutative, guaranteeing the same hash regardless of internal tree structure
         foreach (var kvp in this)
         {
-            var keyHash = kvp.Key == null ? 0 : _comparer.GetHashCode(kvp.Key);
+            var keyHash =  _comparer.GetHashCode(kvp.Key);
             var valHash = kvp.Value == null ? 0 : valueComparer.GetHashCode(kvp.Value);
 
             hash ^= HashCode.Combine(keyHash, valHash);
@@ -161,7 +160,7 @@ public sealed class Map<TK, TV> :
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Iter(Func<TK, TV, bool> action)
     {
-        return TrieOps.Iter<TK, TV>(Root, action);
+        return TrieOps.Iter(Root, action);
     }
 
     /// <summary>
@@ -188,7 +187,7 @@ public sealed class Map<TK, TV> :
     /// <param name="action">A function to transform each key-value pair.</param>
     /// <param name="comparer">An optional equality comparer for the new keys.</param>
     /// <returns>A new <see cref="Map{NK, NV}"/> containing the transformed elements.</returns>
-    public Map<NK, NV> MapCar<NK, NV>(Func<TK, TV, (NK, NV)> action, IEqualityComparer<NK>? comparer = null)
+    public Map<NK, NV> MapCar<NK, NV>(Func<TK, TV, (NK, NV)> action, IEqualityComparer<NK>? comparer = null) where NK : notnull
     {
         var builder = new MapBuilder<NK, NV>(comparer);
         Iter((k, v) =>
@@ -255,7 +254,7 @@ public sealed class Map<TK, TV> :
     {
         var key = default(TK);
         var found = false;
-        Iter((k, v) =>
+        Iter((k, _) =>
         {
             if (pred(k))
             {
@@ -269,7 +268,7 @@ public sealed class Map<TK, TV> :
         if (!found)
             throw new KeyNotFoundException("Key not found in map");
 
-        return key;
+        return key!;
     }
 
     /// <summary>
@@ -327,7 +326,7 @@ public sealed class Map<TK, TV> :
 
         // Recalculate size allocation-free via IterFast
         var counter = 0;
-        TrieOps.Iter<TK, TV>(newRoot, (k, v) =>
+        TrieOps.Iter<TK, TV>(newRoot, (_,_) =>
         {
             counter++;
             return true;
