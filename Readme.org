@@ -88,6 +88,10 @@ var map5 = map3.Merge(map1, conflictResolver: (k, left, right) => right);
 
 #+end_src
 
+** Documentation
+
+I wouldn't call it good by any stretch of the imagination. I don't know how docfx works: https://bjoli.github.io/api/Map.Map-2.html
+
 ** How fast?
  I would say fast. Not as much as I expected from my previous runs, but it is still very competitive. Here are some benchmarks for six different workloads. These are all <int, int> benchmarks, but things don't change much for strings when everyone uses the same kind of hashing algorithm. Using other keys just adds noise, since nobody uses a novel string key storage anyway. 
 
