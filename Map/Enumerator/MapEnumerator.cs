@@ -1,9 +1,5 @@
-/*
- * This was written by AI using an enumerator from another of my projects
- * that was written by almost verbatim copying a tutorial.
- * I don't think I can make any kind of copyright claims at all.
- */
-
+using System;
+using System.Collections;
 using System.Runtime.CompilerServices;
 
 namespace Map;
@@ -21,7 +17,7 @@ internal struct EnumeratorStack
     private StackFrame _element0;
 }
 
-public struct MapEnumerator<TK, TV>
+public struct MapEnumerator<TK, TV> : IEnumerator<KeyValuePair<TK, TV>>
 {
     private EnumeratorStack _stack;
     private int _depth;
@@ -47,8 +43,10 @@ public struct MapEnumerator<TK, TV>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => new(_current.Key, _current.Value);
     }
+    
+    readonly object IEnumerator.Current => Current;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
     {
         while (_depth >= 0)
@@ -58,12 +56,10 @@ public struct MapEnumerator<TK, TV>
 
             if (flags == NodeFlags.None)
             {
-                int capacity = NodeOps.GetCapacity(frame.Node.Meta);
-                if (frame.DataIndex < capacity)
+                var span = NodeOps.GetLeafDataSpan<TK, TV>(frame.Node);
+                if (frame.DataIndex < span.Length)
                 {
-                    // Bypass GetLeafDataSpan completely using raw ref arithmetic
-                    ref var firstSlot = ref Unsafe.As<LeafSlot1<TK, TV>, DataSlot<TK, TV>>(ref Unsafe.As<Node1<TK, TV>>(frame.Node).Data);
-                    _current = Unsafe.Add(ref firstSlot, frame.DataIndex++);
+                    _current = span[frame.DataIndex++];
                     return true;
                 }
             }
@@ -71,24 +67,18 @@ public struct MapEnumerator<TK, TV>
             {
                 var dataArray = NodeOps.GetDataArray<TK, TV>(frame.Node);
 
-                if (frame.DataIndex < dataArray.Length)
+                if (dataArray != null && frame.DataIndex < dataArray.Length)
                 {
                     _current = dataArray[frame.DataIndex++];
                     return true;
                 }
 
-                // Read the child capacity directly from Meta instead of checking childSpan.Length
-                int childCapacity = NodeOps.GetCapacity(frame.Node.Meta);
-
-                if (frame.NodeIndex < childCapacity)
+                var childSpan = NodeOps.GetChildSpan<TK, TV>(frame.Node);
+                if (frame.NodeIndex < childSpan.Length)
                 {
-                    // Bypass GetChildSpan completely using raw pointer/ref arithmetic
-                    ref var firstChild = ref Unsafe.As<NodeSlot1, NodeBase>(ref Unsafe.As<InternalNode1<TK, TV>>(frame.Node).Children);
-                    var nextChild = Unsafe.Add(ref firstChild, frame.NodeIndex++);
-
-                    _stack[_depth + 1] = new StackFrame
-                        { Node = nextChild, DataIndex = 0, NodeIndex = 0 };
+                    var nextChild = childSpan[frame.NodeIndex++];
                     _depth++;
+                    _stack[_depth] = new StackFrame { Node = nextChild, DataIndex = 0, NodeIndex = 0 };
                     continue;
                 }
             }
@@ -107,4 +97,13 @@ public struct MapEnumerator<TK, TV>
 
         return false;
     }
+    
+    public readonly void Dispose()
+    {
     }
+
+    public void Reset()
+    {
+        throw new NotSupportedException();
+    }
+}

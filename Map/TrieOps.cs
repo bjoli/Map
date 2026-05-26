@@ -882,8 +882,7 @@ internal static partial class TrieOps
 
         return resultNode;
     }
-
-
+    
     public static bool Iter<TK, TV>(NodeBase? node, Func<TK, TV, bool> action)
     {
         if (node == null) return true;
@@ -892,15 +891,10 @@ internal static partial class TrieOps
 
         if (flags == NodeFlags.None)
         {
-            int capacity = NodeOps.GetCapacity(node.Meta);
-            if (capacity == 0) return true;
-
-            ref var firstSlot = ref Unsafe.As<LeafSlot1<TK, TV>, DataSlot<TK, TV>>(ref Unsafe.As<Node1<TK, TV>>(node).Data);
-            
-            for (var i = 0; i < capacity; i++)
+            var span = NodeOps.GetLeafDataSpan<TK, TV>(node);
+            for (var i = 0; i < span.Length; i++)
             {
-                ref readonly var slot = ref Unsafe.Add(ref firstSlot, i);
-                if (!action(slot.Key, slot.Value))
+                if (!action(span[i].Key, span[i].Value))
                     return false;
             }
             return true;
@@ -909,30 +903,20 @@ internal static partial class TrieOps
         if (flags == NodeFlags.Internal)
         {
             var dataArray = NodeOps.GetDataArray<TK, TV>(node);
-            int dataLength = dataArray.Length;
-
-            if (dataLength > 0)
+            if (dataArray != null)
             {
-                ref var firstData = ref MemoryMarshal.GetArrayDataReference(dataArray);
-                for (var i = 0; i < dataLength; i++)
+                for (var i = 0; i < dataArray.Length; i++)
                 {
-                    ref readonly var slot = ref Unsafe.Add(ref firstData, i);
-                    if (slot.Key != null && !action(slot.Key, slot.Value))
+                    if (dataArray[i].Key != null && !action(dataArray[i].Key, dataArray[i].Value))
                         return false;
                 }
             }
 
-            int childCapacity = NodeOps.GetCapacity(node.Meta);
-            if (childCapacity > 0)
+            var childSpan = NodeOps.GetChildSpan<TK, TV>(node);
+            for (var i = 0; i < childSpan.Length; i++)
             {
-                ref var firstChild = ref Unsafe.As<NodeSlot1, NodeBase>(ref Unsafe.As<InternalNode1<TK, TV>>(node).Children);
-                
-                for (var i = 0; i < childCapacity; i++)
-                {
-                    var childNode = Unsafe.Add(ref firstChild, i);
-                    if (!Iter(childNode, action))
-                        return false;
-                }
+                if (!Iter(childSpan[i], action))
+                    return false;
             }
 
             return true;
@@ -941,14 +925,17 @@ internal static partial class TrieOps
         // CollisionNode
         var colNode = Unsafe.As<CollisionNode<TK, TV>>(node);
         var slots = colNode.Slots;
-        for (var i = 0; i < slots.Length; i++)
+        if (slots != null)
         {
-            ref readonly var slot = ref slots[i];
-            if (!action(slot.Key, slot.Value))
-                return false;
+            for (var i = 0; i < slots.Length; i++)
+            {
+                if (!action(slots[i].Key, slots[i].Value))
+                    return false;
+            }
         }
 
         return true;
     }
+
     
 }
