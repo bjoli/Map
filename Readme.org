@@ -9,7 +9,7 @@ However, when that issue was fixed, and one stupid inlining mishap was fixed it 
 
 ** How does it look?
 
-Below is some general usage. Remember, this is an immutable data structure that does path copying. This means an update or addition usually only incurs a small copy penalty. It is of course almost always slower than a mutable dictionary, but still pretty fast. I can confidently say that operation for operation this implementation is faster than doing the same thing with clojure's maps, and people are using those for serious business™.
+Below is some general usage. Remember, this is an immutable data structure that does path copying. This means an update or addition usually only incurs a small copy penalty. It is of course often slower than a mutable dictionary, but still pretty fast. I can confidently say that operation for operation this implementation is faster than doing the same thing with clojure's maps, and people are using those for serious business™.
 
 
 #+begin_src csharp
@@ -93,7 +93,7 @@ var map5 = map3.Merge(map1, conflictResolver: (k, left, right) => right);
 
  The transient map is a map that allows for mutating updates on nodes that has no other owner. This allows for somewhat faster building, but very fast bulk updates. The builder is a specialized builder that adds all keys to a list, radix sorts them by the hash and builds the tree directly. It is very fast.
 
- Over all, when using all-persistent workloads (no transients or builders) it is around 2-10x faster than ImmDict (I didn't benchmark the ImmutableDict builder, though!), while being in the same ballpark with regards to memory usage. The full benchmark data, as well as comparisons to more collections can be found in the ../Benchmarks folder.
+ Over all, when using all-persistent workloads (no transients or builders) it is around 2-10x faster than ImmDict (I didn't benchmark the ImmutableDict builder, though), while being in the same ballpark with regards to memory usage. If you can use transients and builders for bulk updates, it stays within 3x of the regular mutable Dict. In some workloads it will actually be faster, which was surprising to me 
 
 *** Building
  Builds a map of N key-value pairs.
@@ -168,22 +168,18 @@ Takes a map of N elements and updates or adds N/10 elements
 | UpdateSet_TransientMap | 100    |        170.85 ns |       0.971 ns |    0.0563 |         - |        - |       944 B |
 | UpdateSet_ImmDict      | 100    |        991.89 ns |       4.868 ns |    0.2613 |         - |        - |      4376 B |
 | UpdateSet_Dict         | 100    |        203.63 ns |       0.708 ns |    0.1357 |         - |        - |      2272 B |
-| UpdateSet_ExtHashMap   | 100    |        416.47 ns |       2.170 ns |    0.2656 |    0.0005 |        - |      4448 B |
 | UpdateSet_Map          | 1000   |      4,920.42 ns |      49.807 ns |    3.8910 |    0.1678 |        - |     65088 B |
 | UpdateSet_TransientMap | 1000   |      1,975.69 ns |      11.449 ns |    1.2665 |    0.0648 |        - |     21224 B |
 | UpdateSet_ImmDict      | 1000   |     14,409.79 ns |      51.564 ns |    3.5248 |    0.0916 |        - |     59160 B |
 | UpdateSet_Dict         | 1000   |      1,909.26 ns |      17.035 ns |    1.3256 |    0.1011 |        - |     22192 B |
-| UpdateSet_ExtHashMap   | 1000   |     13,506.22 ns |     227.660 ns |    6.5918 |    0.2441 |        - |    110440 B |
 | UpdateSet_Map          | 10000  |     72,783.26 ns |     373.260 ns |   44.5557 |    7.3242 |        - |    746240 B |
 | UpdateSet_TransientMap | 10000  |     22,762.00 ns |     547.344 ns |    6.0730 |    1.2207 |        - |    102064 B |
 | UpdateSet_ImmDict      | 10000  |    217,369.98 ns |   1,699.372 ns |   46.1426 |    9.2773 |        - |    775784 B |
 | UpdateSet_Dict         | 10000  |    168,757.26 ns |   1,385.486 ns |  153.8086 |  153.8086 | 153.8086 |    622807 B |
-| UpdateSet_ExtHashMap   | 10000  |     90,007.23 ns |   2,625.571 ns |   48.8281 |    9.2773 |        - |    818240 B |
 | UpdateSet_Map          | 100000 |  1,395,661.38 ns |  22,598.355 ns |  589.8438 |  271.4844 |        - |   9885480 B |
 | UpdateSet_TransientMap | 100000 |    474,293.63 ns |   3,575.335 ns |   52.2461 |   23.9258 |        - |    881576 B |
 | UpdateSet_ImmDict      | 100000 |  3,993,858.29 ns |  27,293.773 ns |  554.6875 |  273.4375 |        - |   9318896 B |
 | UpdateSet_Dict         | 100000 |    473,906.43 ns |  46,198.356 ns |   58.5938 |   58.5938 |  58.5938 |   2173173 B |
-| UpdateSet_ExtHashMap   | 100000 |  1,724,799.46 ns |   6,717.041 ns |  646.4844 |  296.8750 |        - |  10845480 B |
 
 
 *** Iterate
@@ -234,11 +230,9 @@ Takes a map of N elements and removes N/10 of the elements.
 
 ** Who should use this?
 
-Not a living soul. I remember feeling pretty confident it wasn't going to eat my face back in the day, but looking it it now it is doing a lot of unsafe memory access. For the love of god, just use LanguageExt.HashMap. It is fast and high quality.
+Not a living soul. I remember feeling pretty confident it wasn't going to eat my face back in the day, but looking it it now it is doing a lot of unsafe memory access. For the love of god, just use LanguageExt.HashMap. It is fast enough and high quality.
 
-This is a work in progress that will be the default hash map for my own little programming language. I will never work to make it open for general usage.
-
-But please have a look at how I did things.
+This is a work in progress that will be the default hash map for my own little programming language I am making. Any changes I make will reflect the usage of that. I might publish a nuget package, but even that is not sure. But: please, help yourself and have a look at how I did things.
 
 ** Why is it fast?
 
@@ -248,11 +242,11 @@ I also packed a ulong that contained the node capacity (used only in leaf nodes)
 
 Why did I pack this in one ulong? Possibly because I didn't really trust the different Packing directives in dotnet. I had issues with reading protected memory, despite me being very diligent with how things were laid out. I might have been trying to avoid load instructions. 
 
-Anyway, there are 32 different kinds of exact-fit leaf nodes. They contain a ulong meta and N inline slots. This removes one memory indirection compared to using regular arrays. I could probably have made 32 different kinds of inline nodes as well, but since I don't really know what I am going to use this for, i feel like it is a dumb bet. I am not even sure where the sweet spot is for class tree combinatorics. Perhaps am I already past it.
+Anyway, there are 32 different kinds of exact-fit leaf nodes. They contain a ulong meta and N inline slots. This removes one memory indirection compared to using regular arrays. There are also 32 different kinds of internalnodes (the data array is just an array) where the child pointers are inline. 
 ** The really ugly parts
 The transient functionality and persistent functionality are in two different places, despite merging them being pretty simple.
 
-it relies of unsafe memory access, while also being untested.
+it relies on a lot unsafe memory access, while also being relatively untested.
 
 No documentation at all.
 

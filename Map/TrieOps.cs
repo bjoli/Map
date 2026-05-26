@@ -585,48 +585,6 @@ internal static partial class TrieOps
         return node;
     }
 
-    // dotnet 10 can do deviritualisation of regular lambdas just fine. 
-    // we should remove this.
-    public static bool IterFast<TK, TV, TAction>(NodeBase? node, ref TAction action)
-        where TAction : struct, IKeyValueAction<TK, TV>
-    {
-        if (node == null) return true;
-
-        var flags = NodeOps.GetFlags(node.Meta);
-
-        if (flags == NodeFlags.None)
-        {
-            var span = NodeOps.GetLeafDataSpan<TK, TV>(node);
-            for (var i = 0; i < span.Length; i++)
-                if (!action.Invoke(span[i].Key, span[i].Value))
-                    return false;
-            return true;
-        }
-
-        if (flags == NodeFlags.Internal)
-        {
-            var dataArray = NodeOps.GetDataArray<TK, TV>(node);
-            for (var i = 0; i < dataArray.Length; i++)
-                if (!action.Invoke(dataArray[i].Key, dataArray[i].Value))
-                    return false;
-
-            var childSpan = NodeOps.GetChildSpan<TK, TV>(node);
-            for (var i = 0; i < childSpan.Length; i++)
-                if (!IterFast<TK, TV, TAction>(childSpan[i], ref action))
-                    return false;
-
-            return true;
-        }
-
-        // CollisionNode
-        var colNode = Unsafe.As<CollisionNode<TK, TV>>(node);
-        for (var i = 0; i < colNode.Slots.Length; i++)
-            if (!action.Invoke(colNode.Slots[i].Key, colNode.Slots[i].Value))
-                return false;
-
-        return true;
-    }
-
     /// <summary>
     ///     Pure structural merge of two CHAMP nodes
     /// </summary>

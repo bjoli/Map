@@ -284,17 +284,7 @@ public sealed class Map<TK, TV> :
             return true;
         });
     }
-
-    /// <summary>
-    ///     Executes a struct-based action over the map's elements.
-    ///     Iteration stops immediately if the action returns false.
-    /// </summary>
-    /// <returns>True if the iteration completed all elements, or False if aborted early.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IterFast<TAction>(ref TAction action) where TAction : struct, IKeyValueAction<TK, TV>
-    {
-        return TrieOps.IterFast<TK, TV, TAction>(Root, ref action);
-    }
+    
 
     /// <summary>
     ///     Creates a transient version of the map, applies the specified mutation action, and returns an immutable map.
