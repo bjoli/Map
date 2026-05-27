@@ -325,7 +325,8 @@ internal static partial class TrieOps
                     var dataIdx = BitOperations.PopCount(dataMap & (bitpos - 1));
                     var dataArray = NodeOps.GetDataArray<TK, TV>(current);
 
-                    ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray!), dataIdx);
+                    ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray!),
+                        dataIdx);
 
                     if (comparer.Equals(slot.Key, key))
                     {
@@ -839,7 +840,7 @@ internal static partial class TrieOps
 
         return resultNode;
     }
-    
+
     public static bool Iter<TK, TV>(NodeBase? node, Func<TK, TV, bool> action)
     {
         if (node == null) return true;
@@ -850,10 +851,8 @@ internal static partial class TrieOps
         {
             var span = NodeOps.GetLeafDataSpan<TK, TV>(node);
             for (var i = 0; i < span.Length; i++)
-            {
                 if (!action(span[i].Key, span[i].Value))
                     return false;
-            }
             return true;
         }
 
@@ -861,36 +860,27 @@ internal static partial class TrieOps
         {
             var dataArray = NodeOps.GetDataArray<TK, TV>(node);
             if (dataArray != null)
-            {
                 for (var i = 0; i < dataArray.Length; i++)
-                {
                     if (dataArray[i].Key != null && !action(dataArray[i].Key, dataArray[i].Value))
                         return false;
-                }
-            }
 
             var childSpan = NodeOps.GetChildSpan<TK, TV>(node);
             for (var i = 0; i < childSpan.Length; i++)
-            {
                 if (!Iter(childSpan[i], action))
                     return false;
-            }
 
             return true;
         }
 
         // CollisionNode
         var colNode = Unsafe.As<CollisionNode<TK, TV>>(node);
-        DataSlot<TK,TV>[] slots = colNode.Slots;
-        
-            for (var i = 0; i < slots.Length; i++)
-            {
-                if (!action(slots[i].Key, slots[i].Value))
-                    return false;
-            }
-        
+        var slots = colNode.Slots;
+
+        for (var i = 0; i < slots.Length; i++)
+            if (!action(slots[i].Key, slots[i].Value))
+                return false;
+
 
         return true;
     }
-    
 }

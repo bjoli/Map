@@ -42,7 +42,7 @@ public struct MapEnumerator<TK, TV> : IEnumerator<KeyValuePair<TK, TV>>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => new(_current.Key, _current.Value);
     }
-    
+
     readonly object IEnumerator.Current => Current;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -96,7 +96,7 @@ public struct MapEnumerator<TK, TV> : IEnumerator<KeyValuePair<TK, TV>>
 
         return false;
     }
-    
+
     public readonly void Dispose()
     {
     }

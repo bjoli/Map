@@ -7,14 +7,15 @@
  *
  */
 
+using System.Collections;
 using System.Runtime.CompilerServices;
 
 namespace Map;
 
-public sealed class Map<TK, TV> : 
+public sealed class Map<TK, TV> :
     IReadOnlyDictionary<TK, TV>
-    //IImmutableDictionary<TK, TV>,
-    //IEquatable<Map<TK, TV>>,
+//IImmutableDictionary<TK, TV>,
+//IEquatable<Map<TK, TV>>,
     where TK : notnull
 {
     public static readonly Map<TK, TV> Empty = new(null, EqualityComparer<TK>.Default);
@@ -49,12 +50,15 @@ public sealed class Map<TK, TV> :
         Count = count;
     }
 
-    public int Count { get; }
-
     public bool IsEmpty => Count == 0;
 
+    public MapKeyCollection<TK, TV> Keys => new(Root, Count);
+    public MapValueCollection<TK, TV> Values => new(Root, Count);
+
+    public int Count { get; }
+
     public TV this[TK key] => Get(key);
-    
+
 
     public bool ContainsKey(TK key)
     {
@@ -73,6 +77,21 @@ public sealed class Map<TK, TV> :
         var hash = _comparer.GetHashCode(key);
         return TrieOps.TryGetValue(Root, key, hash, _comparer, out value);
     }
+
+    // Explicit implementering för att tillfredsställa gränssnitten
+    IEnumerator<KeyValuePair<TK, TV>> IEnumerable<KeyValuePair<TK, TV>>.GetEnumerator()
+    {
+        return new MapEnumerator<TK, TV>(Root);
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return new MapEnumerator<TK, TV>(Root);
+    }
+
+    // Explicit implementering för att tillfredsställa gränssnittets kontrakt
+    IEnumerable<TK> IReadOnlyDictionary<TK, TV>.Keys => Keys;
+    IEnumerable<TV> IReadOnlyDictionary<TK, TV>.Values => Values;
 
     public TV Get(TK key)
     {
@@ -139,7 +158,7 @@ public sealed class Map<TK, TV> :
         // XOR is commutative, guaranteeing the same hash regardless of internal tree structure
         foreach (var kvp in this)
         {
-            var keyHash =  _comparer.GetHashCode(kvp.Key);
+            var keyHash = _comparer.GetHashCode(kvp.Key);
             var valHash = kvp.Value == null ? 0 : valueComparer.GetHashCode(kvp.Value);
 
             hash ^= HashCode.Combine(keyHash, valHash);
@@ -167,7 +186,7 @@ public sealed class Map<TK, TV> :
     ///     Filters the map, retaining only elements that satisfy the specified predicate.
     /// </summary>
     /// <param name="action">A function to test each value for a condition.</param>
-    /// <returns>A new <see cref="Map{TK, TV}"/> containing the elements that satisfy the condition.</returns>
+    /// <returns>A new <see cref="Map{TK, TV}" /> containing the elements that satisfy the condition.</returns>
     public Map<TK, TV> Filter(Func<TV, TV, bool> action)
     {
         var builder = new MapBuilder<TK, TV>(_comparer);
@@ -186,8 +205,9 @@ public sealed class Map<TK, TV> :
     /// <typeparam name="NV">The type of the new values.</typeparam>
     /// <param name="action">A function to transform each key-value pair.</param>
     /// <param name="comparer">An optional equality comparer for the new keys.</param>
-    /// <returns>A new <see cref="Map{NK, NV}"/> containing the transformed elements.</returns>
-    public Map<NK, NV> MapCar<NK, NV>(Func<TK, TV, (NK, NV)> action, IEqualityComparer<NK>? comparer = null) where NK : notnull
+    /// <returns>A new <see cref="Map{NK, NV}" /> containing the transformed elements.</returns>
+    public Map<NK, NV> MapCar<NK, NV>(Func<TK, TV, (NK, NV)> action, IEqualityComparer<NK>? comparer = null)
+        where NK : notnull
     {
         var builder = new MapBuilder<NK, NV>(comparer);
         Iter((k, v) =>
@@ -216,7 +236,7 @@ public sealed class Map<TK, TV> :
         });
         return seed;
     }
-    
+
     /// <summary>
     ///     Aggregates the keys of the map using the specified function.
     /// </summary>
@@ -283,13 +303,13 @@ public sealed class Map<TK, TV> :
             return true;
         });
     }
-    
+
 
     /// <summary>
     ///     Creates a transient version of the map, applies the specified mutation action, and returns an immutable map.
     /// </summary>
     /// <param name="action">The action to apply to the transient map.</param>
-    /// <returns>A new <see cref="Map{TK, TV}"/> with the mutations applied.</returns>
+    /// <returns>A new <see cref="Map{TK, TV}" /> with the mutations applied.</returns>
     public Map<TK, TV> Mutate(Action<TransientMap<TK, TV>> action)
     {
         var transient = ToTransient();
@@ -326,7 +346,7 @@ public sealed class Map<TK, TV> :
 
         // Recalculate size allocation-free via IterFast
         var counter = 0;
-        TrieOps.Iter<TK, TV>(newRoot, (_,_) =>
+        TrieOps.Iter<TK, TV>(newRoot, (_, _) =>
         {
             counter++;
             return true;
@@ -334,20 +354,9 @@ public sealed class Map<TK, TV> :
 
         return new Map<TK, TV>(newRoot, _comparer, counter);
     }
-    
-    public MapEnumerator<TK, TV> GetEnumerator() => new MapEnumerator<TK, TV>(Root);
 
-    // Explicit implementering för att tillfredsställa gränssnitten
-    IEnumerator<KeyValuePair<TK, TV>> IEnumerable<KeyValuePair<TK, TV>>.GetEnumerator() => 
-        new MapEnumerator<TK, TV>(Root);
-
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => 
-        new MapEnumerator<TK, TV>(Root);
-    
-    public MapKeyCollection<TK, TV> Keys => new(Root, Count);
-    public MapValueCollection<TK, TV> Values => new(Root, Count);
-
-    // Explicit implementering för att tillfredsställa gränssnittets kontrakt
-    IEnumerable<TK> IReadOnlyDictionary<TK, TV>.Keys => Keys;
-    IEnumerable<TV> IReadOnlyDictionary<TK, TV>.Values => Values;
+    public MapEnumerator<TK, TV> GetEnumerator()
+    {
+        return new MapEnumerator<TK, TV>(Root);
+    }
 }

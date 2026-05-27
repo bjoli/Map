@@ -12,8 +12,8 @@ using System.Runtime.CompilerServices;
 namespace Map;
 
 /// <summary>
-/// A mutable, transient version of a <see cref="Map{TK, TV}"/> that can be efficiently modified
-/// before being converted back to an immutable map.
+///     A mutable, transient version of a <see cref="Map{TK, TV}" /> that can be efficiently modified
+///     before being converted back to an immutable map.
 /// </summary>
 public sealed class TransientMap<TK, TV> where TK : notnull
 {
@@ -31,12 +31,12 @@ public sealed class TransientMap<TK, TV> where TK : notnull
     }
 
     /// <summary>
-    /// Attempts to get the value associated with the specified key.
+    ///     Attempts to get the value associated with the specified key.
     /// </summary>
     /// <param name="key">The key of the value to get.</param>
     /// <param name="value">
-    /// When this method returns, contains the value associated with the specified key, if the key is found;
-    /// otherwise, the default value for the type of the <paramref name="value"/> parameter.
+    ///     When this method returns, contains the value associated with the specified key, if the key is found;
+    ///     otherwise, the default value for the type of the <paramref name="value" /> parameter.
     /// </param>
     /// <returns><c>true</c> if the key was found; otherwise, <c>false</c>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -53,8 +53,8 @@ public sealed class TransientMap<TK, TV> where TK : notnull
     }
 
     /// <summary>
-    /// Adds an element with the provided key and value to the map. If the key already exists,
-    /// the existing value is updated.
+    ///     Adds an element with the provided key and value to the map. If the key already exists,
+    ///     the existing value is updated.
     /// </summary>
     /// <param name="key">The object to use as the key of the element to add.</param>
     /// <param name="value">The object to use as the value of the element to add.</param>
@@ -66,7 +66,7 @@ public sealed class TransientMap<TK, TV> where TK : notnull
     }
 
     /// <summary>
-    /// Removes the element with the specified key from the map.
+    ///     Removes the element with the specified key from the map.
     /// </summary>
     /// <param name="key">The key of the element to remove.</param>
     public void Remove(TK key)
@@ -79,8 +79,8 @@ public sealed class TransientMap<TK, TV> where TK : notnull
     }
 
     /// <summary>
-    /// Creates an immutable <see cref="Map{TK, TV}"/> from the contents of this transient map.
-    /// This operation is an O(1) operation and does not involve copying the data.
+    ///     Creates an immutable <see cref="Map{TK, TV}" /> from the contents of this transient map.
+    ///     This operation is an O(1) operation and does not involve copying the data.
     /// </summary>
     /// <returns>An immutable map.</returns>
     public Map<TK, TV> ToImmutable()
