@@ -99,6 +99,8 @@ I wouldn't call it good by any stretch of the imagination. I don't know how docf
 
  Over all, when using all-persistent workloads (no transients or builders) it is around 2-10x faster than ImmDict (I didn't benchmark the ImmutableDict builder, though), while being in the same ballpark with regards to memory usage. If you can use transients and builders for bulk updates, it stays within 3x of the regular mutable Dict. In some workloads it will actually be faster, which was surprising to me 
 
+The .md output from benchmarkdotnet can be found in the Benchmarks/Fullresults folder. That also compares against some other containers.
+
 *** Building
  Builds a map of N key-value pairs.
 
