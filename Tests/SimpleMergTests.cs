@@ -20,10 +20,10 @@ public class PersistentMapSimpleLargeTests
             var evenKey = i * 2;
             var oddKey = i * 2 + 1;
 
-            map1 = map1.Add(evenKey, 1);
+            map1 = map1.Set(evenKey, 1);
             oracle[evenKey] = 1;
 
-            map2 = map2.Add(oddKey, 0);
+            map2 = map2.Set(oddKey, 0);
             oracle[oddKey] = 0;
         }
 
@@ -50,8 +50,8 @@ public class PersistentMapSimpleLargeTests
         // Both maps contain identical keys [0 ... 33000)
         for (var i = 0; i < LargeCount; i++)
         {
-            map1 = map1.Add(i, 1); // Left has 1s
-            map2 = map2.Add(i, 0); // Right has 0s
+            map1 = map1.Set(i, 1); // Left has 1s
+            map2 = map2.Set(i, 0); // Right has 0s
             oracle[i] = 0; // Prefer Right defaults to 0
         }
 
@@ -76,8 +76,8 @@ public class PersistentMapSimpleLargeTests
 
         for (var i = 0; i < LargeCount; i++)
         {
-            map1 = map1.Add(i, 1);
-            map2 = map2.Add(i, 1);
+            map1 = map1.Set(i, 1);
+            map2 = map2.Set(i, 1);
         }
 
         // Act

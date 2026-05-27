@@ -10,11 +10,11 @@ namespace Benchmarks;
 public class IntMapBenchmarks
 {
     private int[] _allKeys;
+    private Dictionary<int, int> _dict;
     private HashMap<int, int> _extHashMap;
 
     // Pre-built collections for read/update/remove tests
     private ImmutableDictionary<int, int> _immDict;
-    private Dictionary<int, int> _dict;
     private Map.Map<int, int> _map;
     private int[] _mixedKeys; // Half existing, half new
     private int[] _removeKeys;
@@ -51,7 +51,7 @@ public class IntMapBenchmarks
         _map = Map.Map<int, int>.Empty;
         foreach (var k in _allKeys)
         {
-            _map = _map.Add(k, k);
+            _map = _map.Set(k, k);
             _extHashMap = _extHashMap.AddOrUpdate(k, k);
             _dict.Add(k, k);
         }
@@ -64,7 +64,7 @@ public class IntMapBenchmarks
     public Map.Map<int, int> Build_Map()
     {
         var map = Map.Map<int, int>.Empty;
-        foreach (var k in _allKeys) map = map.Add(k, k);
+        foreach (var k in _allKeys) map = map.Set(k, k);
         return map;
     }
 
@@ -72,7 +72,7 @@ public class IntMapBenchmarks
     public Map.Map<int, int> Build_TransientMap()
     {
         var map = Map.Map<int, int>.Empty.ToTransient();
-        foreach (var k in _allKeys) map.Add(k, k);
+        foreach (var k in _allKeys) map.Set(k, k);
         return map.ToImmutable();
     }
 
@@ -107,7 +107,7 @@ public class IntMapBenchmarks
         foreach (var k in _allKeys) map = map.Add(k, k);
         return map;
     }
-    
+
     [Benchmark]
     public HashMap<int, int> Build_ExtHashMap()
     {
@@ -137,7 +137,7 @@ public class IntMapBenchmarks
                 count++;
         return count;
     }
-    
+
     [Benchmark]
     public int Retrieve_Dict()
     {
@@ -167,7 +167,7 @@ public class IntMapBenchmarks
     public Map.Map<int, int> Update_Map()
     {
         var map = _map;
-        foreach (var k in _updateKeys) map = map.Add(k, 999);
+        foreach (var k in _updateKeys) map = map.Set(k, 999);
         return map;
     }
 
@@ -175,7 +175,7 @@ public class IntMapBenchmarks
     public Map.Map<int, int> Update_TransientMap()
     {
         var map = _map.ToTransient();
-        foreach (var k in _updateKeys) map.Add(k, 999);
+        foreach (var k in _updateKeys) map.Set(k, 999);
         return map.ToImmutable();
     }
 
@@ -210,7 +210,7 @@ public class IntMapBenchmarks
     public Map.Map<int, int> UpdateSet_Map()
     {
         var map = _map;
-        foreach (var k in _mixedKeys) map = map.Add(k, 999);
+        foreach (var k in _mixedKeys) map = map.Set(k, 999);
         return map;
     }
 
@@ -218,7 +218,7 @@ public class IntMapBenchmarks
     public Map.Map<int, int> UpdateSet_TransientMap()
     {
         var map = _map.ToTransient();
-        foreach (var k in _mixedKeys) map.Add(k, 999);
+        foreach (var k in _mixedKeys) map.Set(k, 999);
         return map.ToImmutable();
     }
 

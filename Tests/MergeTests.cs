@@ -12,7 +12,7 @@ public class PersistentMapMergeTests
         // Arrange
         var empty1 = Map<string, int>.Empty;
         var empty2 = Map<string, int>.Empty;
-        var mapWithData = empty1.Add("A", 1).Add("B", 2);
+        var mapWithData = empty1.Set("A", 1).Set("B", 2);
 
         // Act & Assert
         // 1. Both empty
@@ -36,8 +36,8 @@ public class PersistentMapMergeTests
     public void Merge_NoOverlappingKeys_CombinesAllElements()
     {
         // Arrange
-        var map1 = Map<string, int>.Empty.Add("A", 1).Add("B", 2);
-        var map2 = Map<string, int>.Empty.Add("C", 3).Add("D", 4);
+        var map1 = Map<string, int>.Empty.Set("A", 1).Set("B", 2);
+        var map2 = Map<string, int>.Empty.Set("C", 3).Set("D", 4);
 
         // Act
         var merged = map1.Merge(map2);
@@ -54,8 +54,8 @@ public class PersistentMapMergeTests
     public void Merge_DefaultStrategy_OverwritesWithRightValue()
     {
         // Arrange
-        var map1 = Map<string, int>.Empty.Add("A", 1).Add("B", 2);
-        var map2 = Map<string, int>.Empty.Add("B", 99).Add("C", 3);
+        var map1 = Map<string, int>.Empty.Set("A", 1).Set("B", 2);
+        var map2 = Map<string, int>.Empty.Set("B", 99).Set("C", 3);
 
         // Act
         var merged = map1.Merge(map2); // Defaults to null thunk -> prefer right
@@ -71,8 +71,8 @@ public class PersistentMapMergeTests
     public void Merge_PreferLeftThunk_KeepsLeftValueOnConflict()
     {
         // Arrange
-        var map1 = Map<string, int>.Empty.Add("A", 1).Add("B", 2);
-        var map2 = Map<string, int>.Empty.Add("B", 99).Add("C", 3);
+        var map1 = Map<string, int>.Empty.Set("A", 1).Set("B", 2);
+        var map2 = Map<string, int>.Empty.Set("B", 99).Set("C", 3);
 
         // Act
         var merged = map1.Merge(map2, (key, left, right) => left);
@@ -88,8 +88,8 @@ public class PersistentMapMergeTests
     public void Merge_CustomThunk_CombinesValues()
     {
         // Arrange
-        var map1 = Map<string, string>.Empty.Add("user1", "Role:User");
-        var map2 = Map<string, string>.Empty.Add("user1", "Role:Admin").Add("user2", "Role:Guest");
+        var map1 = Map<string, string>.Empty.Set("user1", "Role:User");
+        var map2 = Map<string, string>.Empty.Set("user1", "Role:Admin").Set("user2", "Role:Guest");
 
         // Act
         var merged = map1.Merge(map2, (key, left, right) => $"{left},{right}");
@@ -108,12 +108,12 @@ public class PersistentMapMergeTests
         var map1 = Map<int, int>.Empty;
         var map2 = Map<int, int>.Empty;
 
-        for (var i = 0; i < 100; i += 2) map1 = map1.Add(i, i); // Even keys: 0, 2, 4...
-        for (var i = 1; i < 100; i += 2) map2 = map2.Add(i, i * 10); // Odd keys:  1, 3, 5...
+        for (var i = 0; i < 100; i += 2) map1 = map1.Set(i, i); // Even keys: 0, 2, 4...
+        for (var i = 1; i < 100; i += 2) map2 = map2.Set(i, i * 10); // Odd keys:  1, 3, 5...
 
         // Add one direct conflict key to both
-        map1 = map1.Add(500, 500);
-        map2 = map2.Add(500, 5000);
+        map1 = map1.Set(500, 500);
+        map2 = map2.Set(500, 5000);
 
         // Act
         var merged = map1.Merge(map2); // Prefer right
@@ -130,8 +130,8 @@ public class PersistentMapMergeTests
     {
         // Arrange
         var comparer = new ForcedCollisionComparer();
-        var map1 = new Map<string, int>(comparer).Add("KeyA", 1).Add("KeyB", 2);
-        var map2 = new Map<string, int>(comparer).Add("KeyB", 99).Add("KeyC", 3);
+        var map1 = new Map<string, int>(comparer).Set("KeyA", 1).Set("KeyB", 2);
+        var map2 = new Map<string, int>(comparer).Set("KeyB", 99).Set("KeyC", 3);
 
         // Act
         var merged = map1.Merge(map2); // Default strategy
@@ -148,8 +148,8 @@ public class PersistentMapMergeTests
     {
         // Arrange
         var comparer = new ForcedCollisionComparer();
-        var map1 = new Map<string, int>(comparer).Add("KeyA", 1).Add("KeyB", 2);
-        var map2 = new Map<string, int>(comparer).Add("KeyB", 3).Add("KeyC", 4);
+        var map1 = new Map<string, int>(comparer).Set("KeyA", 1).Set("KeyB", 2);
+        var map2 = new Map<string, int>(comparer).Set("KeyB", 3).Set("KeyC", 4);
 
         // Act
         var merged = map1.Merge(map2, (k, l, r) => l + r); // Sum conflicts
@@ -233,7 +233,7 @@ public class PersistentMapMergeTests
             var key = startKey + i;
             var value = valueGenerator(key);
 
-            map = map.Add(key, value);
+            map = map.Set(key, value);
             oracle[key] = value;
         }
 
@@ -244,10 +244,10 @@ public class PersistentMapMergeTests
     public void MergeOverlap()
     {
         var zeromap = Map<int, int>.Empty;
-        for (var i = 0; i < 20000; i++) zeromap = zeromap.Add(i, 0);
+        for (var i = 0; i < 20000; i++) zeromap = zeromap.Set(i, 0);
 
         var oneMap = Map<int, int>.Empty;
-        for (var i = 10000; i < 30000; i++) oneMap = oneMap.Add(i, 1);
+        for (var i = 10000; i < 30000; i++) oneMap = oneMap.Set(i, 1);
 
         var merged = zeromap.Merge(oneMap, (k, v, v2) => 10);
         Assert.Equal(10, merged[10000]);

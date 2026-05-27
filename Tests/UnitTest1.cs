@@ -21,8 +21,8 @@ public class MapTests
     public void RegularOps_AddAndSet_ShouldInsertAndModifyContiguously()
     {
         var map0 = Map<int, string>.Empty;
-        var map1 = map0.Add(1, "value_1");
-        var map2 = map1.Add(2, "value_2");
+        var map1 = map0.Set(1, "value_1");
+        var map2 = map1.Set(2, "value_2");
 
         // Verify structural immutability isolation
         Assert.Equal(0, map0.Count);
@@ -35,7 +35,7 @@ public class MapTests
         Assert.True(map2.ContainsKey(1));
 
         // Verify Value Overwrite
-        var map3 = map2.Add(1, "value_1_updated");
+        var map3 = map2.Set(1, "value_1_updated");
         Assert.Equal(2, map3.Count);
         Assert.Equal("value_1_updated", map3[1]);
     }
@@ -44,9 +44,9 @@ public class MapTests
     public void RegularOps_Remove_ShouldDeleteAndTriggerCompaction()
     {
         var map = Map<int, string>.Empty
-            .Add(1, "one")
-            .Add(2, "two")
-            .Add(3, "three");
+            .Set(1, "one")
+            .Set(2, "two")
+            .Set(3, "three");
 
         var removed1 = map.Remove(2);
         Assert.Equal(2, removed1.Count);
@@ -66,12 +66,12 @@ public class MapTests
     [Fact]
     public void TransientOps_ShouldMutateInPlaceAndIsolateOnFreeze()
     {
-        var map = Map<int, string>.Empty.Add(1, "one");
+        var map = Map<int, string>.Empty.Set(1, "one");
         var transient = map.ToTransient();
 
         // Perform fast transient mutations
-        transient.Add(2, "two");
-        transient.Add(3, "three");
+        transient.Set(2, "two");
+        transient.Set(3, "three");
 
         Assert.True(transient.TryGetValue(2, out var val));
         Assert.Equal("two", val);
@@ -111,7 +111,7 @@ public class MapTests
                 if (!truth.ContainsKey(key)) trackedKeys.Add(key);
 
                 truth = truth.SetItem(key, val);
-                map = map.Add(key, val);
+                map = map.Set(key, val);
             }
             else if (op < 90) // 35% Removals
             {
@@ -138,7 +138,7 @@ public class MapTests
                         var key = rand.Next(20001, 40000); // Disjoint key space
                         var val = $"t_{i}_{j}";
 
-                        transient.Add(key, val);
+                        transient.Set(key, val);
                         truth = truth.SetItem(key, val);
                     }
                     else if (trackedKeys.Count > 0) // Remove inside transient frame

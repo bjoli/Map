@@ -376,6 +376,95 @@ internal static partial class TrieOps
         return false;
     }
 
+    // Yes, I am the code-duplication-batman!
+    // See if you can see the difference to the above function
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryGetKey<TK, TV>(NodeBase? node, TK key, int hash, IEqualityComparer<TK> comparer,
+        out TK value)
+    {
+        var shift = 0;
+        var current = node;
+
+        while (current != null)
+        {
+            var meta = current.Meta;
+            var flags = (byte)((meta >> 8) & 0xFF);
+
+            if (flags == (byte)NodeFlags.Collision)
+            {
+                var slots = Unsafe.As<CollisionNode<TK, TV>>(current).Slots;
+                for (var i = 0; i < slots.Length; i++)
+                    if (comparer.Equals(slots[i].Key, key))
+                    {
+                        value = slots[i].Key;
+                        return true;
+                    }
+
+                break;
+            }
+
+            var bit = (hash >> shift) & 0x1F;
+            var bitpos = 1u << bit;
+            var map = current.Map;
+            var dataMap = (uint)map;
+
+            if (flags == (byte)NodeFlags.Internal)
+            {
+                if ((dataMap & bitpos) != 0)
+                {
+                    var dataIdx = BitOperations.PopCount(dataMap & (bitpos - 1));
+                    var dataArray = NodeOps.GetDataArray<TK, TV>(current);
+
+                    ref readonly var slot = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(dataArray!),
+                        dataIdx);
+
+                    if (comparer.Equals(slot.Key, key))
+                    {
+                        value = slot.Key;
+                        return true;
+                    }
+
+                    break;
+                }
+
+                var nodeMap = (uint)(map >> 32);
+                if ((nodeMap & bitpos) != 0)
+                {
+                    var nodeIdx = BitOperations.PopCount(nodeMap & (bitpos - 1));
+
+                    ref var firstChild =
+                        ref Unsafe.As<NodeSlot1, NodeBase>(ref Unsafe.As<InternalNode1<TK, TV>>(current).Children);
+                    current = Unsafe.Add(ref firstChild, nodeIdx);
+
+                    shift += 5;
+                    continue;
+                }
+
+                break;
+            }
+
+            // Leaf Node Phase
+            if ((dataMap & bitpos) != 0)
+            {
+                var dataIdx = BitOperations.PopCount(dataMap & (bitpos - 1));
+
+                ref var firstSlot =
+                    ref Unsafe.As<LeafSlot1<TK, TV>, DataSlot<TK, TV>>(ref Unsafe.As<Node1<TK, TV>>(current).Data);
+                ref readonly var slot = ref Unsafe.Add(ref firstSlot, dataIdx);
+
+                if (comparer.Equals(slot.Key, key))
+                {
+                    value = slot.Key;
+                    return true;
+                }
+            }
+
+            break;
+        }
+
+        value = default!;
+        return false;
+    }
 
 // The following handles deleting a key from the trie. it hunts down the node, strips out
 // the data slot, and then painstakingly re-compacts the tree if a node becomes too sparse. 

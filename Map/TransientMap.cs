@@ -58,12 +58,25 @@ public sealed class TransientMap<TK, TV> where TK : notnull
     /// </summary>
     /// <param name="key">The object to use as the key of the element to add.</param>
     /// <param name="value">The object to use as the value of the element to add.</param>
-    public void Add(TK key, TV value)
+    public void Set(TK key, TV value)
     {
         var hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
         _root = TrieOps.InsertTransient(_root, key, value, hash, 0, _comparer, _ownerId, out var added);
         if (added) _count++;
     }
+    
+    public void Add(TK key, TV value)
+    {
+        var hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
+        if (TrieOps.TryGetKey<TK,TV>(_root, key, hash, _comparer, out _))
+        {
+            throw new ArgumentException($"The key {key} is already registered.", nameof(key));
+        }
+        _root = TrieOps.InsertTransient(_root, key, value, hash, 0, _comparer, _ownerId, out  _);
+        _count++;
+    }
+    
+    
 
     /// <summary>
     ///     Removes the element with the specified key from the map.
