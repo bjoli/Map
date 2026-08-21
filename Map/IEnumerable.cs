@@ -15,7 +15,6 @@ namespace Map;
 
 public sealed partial class Map<TK,TV>  :
     IEnumerable<KeyValuePair<TK,TV>>
-    where TK : notnull
 {
     
     IEnumerator<KeyValuePair<TK, TV>> IEnumerable<KeyValuePair<TK, TV>>.GetEnumerator()

@@ -16,7 +16,6 @@ namespace Map;
 // but do not satisfy the types. 
 public sealed partial class Map<TK, TV> :
     IImmutableDictionary<TK, TV>
-    where TK : notnull
 {
     bool IImmutableDictionary<TK, TV>.TryGetKey(TK key, out TK value)
     {
@@ -40,7 +39,8 @@ public sealed partial class Map<TK, TV> :
 
     bool IImmutableDictionary<TK, TV>.Contains(KeyValuePair<TK, TV> kvp)
     {
-        return Exists((k, v) => k.Equals(kvp.Key) && v!.Equals(kvp.Value));
+        return Exists((k, v) =>
+            EqualityComparer<TK>.Default.Equals(k, kvp.Key) && EqualityComparer<TV>.Default.Equals(v, kvp.Value));
     }
 
     IImmutableDictionary<TK, TV> IImmutableDictionary<TK, TV>.Remove(TK key)

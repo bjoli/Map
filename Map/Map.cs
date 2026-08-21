@@ -11,9 +11,12 @@ using System.Runtime.CompilerServices;
 
 namespace Map;
 
+// No `where TK : notnull`. The constraint is unenforceable at the Bjolang
+// boundary — the generated C# carries no `where` clauses at all — and every
+// Bjolang type argument is non-null anyway, so requiring it here only produced
+// CS8714 at each generic call site.
 public sealed partial class Map<TK, TV> :
     IEquatable<Map<TK, TV>>
-    where TK : notnull
 {
     public static readonly Map<TK, TV> Empty = new(null, EqualityComparer<TK>.Default);
     private readonly IEqualityComparer<TK> _comparer;
@@ -49,6 +52,27 @@ public sealed partial class Map<TK, TV> :
 
     public bool IsEmpty => Count == 0;
 
+    /// <summary>
+    ///     The equality the keys are filed under. Exposed so that a derived map — a filter, a
+    ///     mapping of the values — can be built under the same one rather than silently
+    ///     falling back to the default.
+    /// </summary>
+    public IEqualityComparer<TK> Comparer => _comparer;
+
+    /// <summary>
+    ///     The comparer's hash of a key.
+    ///
+    ///     The suppression is the whole reason this is a method: with no <c>notnull</c> on
+    ///     <typeparamref name="TK" /> the compiler cannot see that a key is non-null, and
+    ///     <see cref="IEqualityComparer{T}.GetHashCode" /> disallows one. A null key is a
+    ///     caller error, not a case handled here.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int HashOf(TK key)
+    {
+        return _comparer.GetHashCode(key!);
+    }
+
     public MapKeyCollection<TK, TV> Keys => new(_root, Count);
     public MapValueCollection<TK, TV> Values => new(_root, Count);
 
@@ -71,7 +95,7 @@ public sealed partial class Map<TK, TV> :
             return false;
         }
 
-        var hash = _comparer.GetHashCode(key);
+        var hash = HashOf(key);
         return TrieOps.TryGetValue(_root, key, hash, _comparer, out value);
     }
 
@@ -90,7 +114,7 @@ public sealed partial class Map<TK, TV> :
             return false;
         }
 
-        var hash = _comparer.GetHashCode(key);
+        var hash = HashOf(key);
         return TrieOps.TryGetKey<TK, TV>(_root, key, hash, _comparer, out value);
     }
 
@@ -104,7 +128,7 @@ public sealed partial class Map<TK, TV> :
     // overwrite the value or raise an exception.
     public Map<TK, TV> Set(TK key, TV value)
     {
-        var hash = _comparer.GetHashCode(key);
+        var hash = HashOf(key);
         var newRoot = TrieOps.Insert(_root, key, value, hash, 0, _comparer, out var added);
 
         // If nothing was added NOR CHANGED, we can just return the same persistentmap
@@ -117,7 +141,7 @@ public sealed partial class Map<TK, TV> :
     {
         if (ContainsKey(key))
             throw new ArgumentException($"The key '{key}' is already in the map.");
-        var hash = _comparer.GetHashCode(key);
+        var hash = HashOf(key);
         var newRoot = TrieOps.Insert(_root, key, value, hash, 0, _comparer, out var added);
 
         return new Map<TK, TV>(newRoot, _comparer, added ? Count + 1 : Count);
@@ -146,7 +170,7 @@ public sealed partial class Map<TK, TV> :
     {
         if (_root == null) return this;
 
-        var hash = _comparer.GetHashCode(key);
+        var hash = HashOf(key);
         var newRoot = TrieOps.Remove<TK, TV>(_root!, key, hash, 0, _comparer, out var removed);
 
         if (!removed) return this;
@@ -188,7 +212,7 @@ public sealed partial class Map<TK, TV> :
         // XOR is commutative, guaranteeing the same hash regardless of internal tree structure
         foreach (var kvp in this)
         {
-            var keyHash = _comparer.GetHashCode(kvp.Key);
+            var keyHash = HashOf(kvp.Key);
             var valHash = kvp.Value == null ? 0 : valueComparer.GetHashCode(kvp.Value);
 
             hash ^= HashCode.Combine(keyHash, valHash);
@@ -199,7 +223,7 @@ public sealed partial class Map<TK, TV> :
 
     public TransientMap<TK, TV> ToTransient()
     {
-        return new TransientMap<TK, TV>(_root, _comparer);
+        return new TransientMap<TK, TV>(_root, _comparer, Count);
     }
 
     /// <summary>
@@ -215,14 +239,14 @@ public sealed partial class Map<TK, TV> :
     /// <summary>
     ///     Filters the map, retaining only elements that satisfy the specified predicate.
     /// </summary>
-    /// <param name="action">A function to test each value for a condition.</param>
+    /// <param name="predicate">A function to test each entry for a condition.</param>
     /// <returns>A new <see cref="Map{TK, TV}" /> containing the elements that satisfy the condition.</returns>
-    public Map<TK, TV> Filter(Func<TV, TV, bool> action)
+    public Map<TK, TV> Filter(Func<TK, TV, bool> predicate)
     {
         var builder = new MapBuilder<TK, TV>(_comparer);
         Iter((k, v) =>
         {
-            builder.Add(k, v);
+            if (predicate(k, v)) builder.Add(k, v);
             return true;
         });
         return builder.ToImmutable();
@@ -237,7 +261,6 @@ public sealed partial class Map<TK, TV> :
     /// <param name="comparer">An optional equality comparer for the new keys.</param>
     /// <returns>A new <see cref="Map{NK, NV}" /> containing the transformed elements.</returns>
     public Map<TNk, TNv> MapCar<TNk, TNv>(Func<TK, TV, (TNk, TNv)> action, IEqualityComparer<TNk>? comparer = null)
-        where TNk : notnull
     {
         var builder = new MapBuilder<TNk, TNv>(comparer);
         Iter((k, v) =>
@@ -291,7 +314,9 @@ public sealed partial class Map<TK, TV> :
     /// <returns><c>true</c> if the map contains an element that satisfies the condition; otherwise, <c>false</c>.</returns>
     public bool Exists(Func<TK, TV, bool> pred)
     {
-        return Iter((k, v) => { return !pred(k, v); });
+        // `Iter` reports whether it ran to the *end*, so a walk that never stopped is a walk
+        // that never matched. The outer negation is what turns "no match" into an answer.
+        return !Iter((k, v) => !pred(k, v));
     }
 
     /// <summary>

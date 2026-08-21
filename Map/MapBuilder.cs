@@ -42,7 +42,7 @@ internal struct BuilderEntry<TK, TV>
 ///     It's more efficient to add items to this builder first and then
 ///     convert it to a Map in one go, rather than creating a new Map for each addition.
 /// </summary>
-public sealed class MapBuilder<TK, TV> where TK : notnull
+public sealed class MapBuilder<TK, TV>
 {
     private readonly IEqualityComparer<TK> _comparer;
     private int _count;
@@ -58,6 +58,25 @@ public sealed class MapBuilder<TK, TV> where TK : notnull
         // GC.AllocateUninitializedArray is a performance trick to avoid zeroing out the memory.
         _entries = GC.AllocateUninitializedArray<BuilderEntry<TK, TV>>(initialCapacity);
         _comparer = comparer ?? EqualityComparer<TK>.Default;
+    }
+
+    /// <summary>
+    ///     How many entries have been *appended*. Duplicate keys are compacted when the map is
+    ///     built, so this is an upper bound on the size of the map to come rather than its size.
+    /// </summary>
+    public int Count => _count;
+
+    /// <summary>The comparer the built map will use.</summary>
+    public IEqualityComparer<TK> Comparer => _comparer;
+
+    /// <summary>
+    ///     The comparer's hash of a key. See <see cref="Map{TK,TV}" /> for why the suppression
+    ///     is here rather than a <c>notnull</c> constraint.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int HashOf(TK key)
+    {
+        return _comparer.GetHashCode(key!);
     }
 
     /// <summary>
@@ -83,7 +102,7 @@ public sealed class MapBuilder<TK, TV> where TK : notnull
         // 2. Bounds-Check Elimination
         ref var dest = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(entries), count);
 
-        dest.Hash = _comparer.GetHashCode(key);
+        dest.Hash = HashOf(key);
         dest.Key = key;
         dest.Value = value;
 

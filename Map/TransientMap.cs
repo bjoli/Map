@@ -15,19 +15,37 @@ namespace Map;
 ///     A mutable, transient version of a <see cref="Map{TK, TV}" /> that can be efficiently modified
 ///     before being converted back to an immutable map.
 /// </summary>
-public sealed class TransientMap<TK, TV> where TK : notnull
+public sealed class TransientMap<TK, TV>
 {
     private readonly IEqualityComparer<TK> _comparer;
     private int _count;
     private ulong _ownerId;
     private NodeBase? _root;
 
-    internal TransientMap(NodeBase? root, IEqualityComparer<TK> comparer)
+    internal TransientMap(NodeBase? root, IEqualityComparer<TK> comparer, int count)
     {
         _root = root;
         _comparer = comparer;
         _ownerId = OwnerId.Next();
-        _count = 0;
+        _count = count;
+    }
+
+    /// <summary>How many entries the transient holds as it stands.</summary>
+    public int Count => _count;
+
+    public bool IsEmpty => _count == 0;
+
+    /// <summary>The equality the keys are filed under.</summary>
+    public IEqualityComparer<TK> Comparer => _comparer;
+
+    /// <summary>
+    ///     The comparer's hash of a key. See <see cref="Map{TK,TV}" /> for why the suppression
+    ///     is here rather than a <c>notnull</c> constraint.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int HashOf(TK key)
+    {
+        return _comparer.GetHashCode(key!);
     }
 
     /// <summary>
@@ -48,7 +66,7 @@ public sealed class TransientMap<TK, TV> where TK : notnull
             return false;
         }
 
-        var hash = _comparer.GetHashCode(key);
+        var hash = HashOf(key);
         return TrieOps.TryGetValue(_root, key, hash, _comparer, out value);
     }
 
@@ -60,14 +78,14 @@ public sealed class TransientMap<TK, TV> where TK : notnull
     /// <param name="value">The object to use as the value of the element to add.</param>
     public void Set(TK key, TV value)
     {
-        var hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
+        var hash = HashOf(key);
         _root = TrieOps.InsertTransient(_root, key, value, hash, 0, _comparer, _ownerId, out var added);
         if (added) _count++;
     }
-    
+
     public void Add(TK key, TV value)
     {
-        var hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
+        var hash = HashOf(key);
         if (TrieOps.TryGetKey<TK,TV>(_root, key, hash, _comparer, out _))
         {
             throw new ArgumentException($"The key {key} is already registered.", nameof(key));
@@ -75,8 +93,6 @@ public sealed class TransientMap<TK, TV> where TK : notnull
         _root = TrieOps.InsertTransient(_root, key, value, hash, 0, _comparer, _ownerId, out  _);
         _count++;
     }
-    
-    
 
     /// <summary>
     ///     Removes the element with the specified key from the map.
@@ -86,9 +102,37 @@ public sealed class TransientMap<TK, TV> where TK : notnull
     {
         if (_root == null) return;
 
-        var hash = _comparer.GetHashCode(key ?? throw new ArgumentNullException(nameof(key)));
+        var hash = HashOf(key);
         _root = TrieOps.RemoveTransient<TK, TV>(_root, key, hash, 0, _comparer, out var removed, _ownerId);
         if (removed) _count--;
+    }
+
+    public bool ContainsKey(TK key)
+    {
+        return TryGetValue(key, out _);
+    }
+
+    /// <summary>The value under <paramref name="key" />, or a throw if there is none.</summary>
+    public TV Get(TK key)
+    {
+        if (TryGetValue(key, out var value)) return value;
+
+        throw new KeyNotFoundException($"The key '{key}' was not present in the map.");
+    }
+
+    /// <summary>
+    ///     Walks the transient as it stands, stopping when <paramref name="action" /> answers
+    ///     false. Finish the walk before the next write: the nodes underneath it are the ones a
+    ///     write mutates in place.
+    /// </summary>
+    public bool Iter(Func<TK, TV, bool> action)
+    {
+        return TrieOps.Iter(_root, action);
+    }
+
+    public MapEnumerator<TK, TV> GetEnumerator()
+    {
+        return new MapEnumerator<TK, TV>(_root);
     }
 
     /// <summary>

@@ -43,6 +43,20 @@ public struct MapEnumerator<TK, TV> : IEnumerator<KeyValuePair<TK, TV>>
         get => new(_current.Key, _current.Value);
     }
 
+    /// <summary>
+    ///     The same entry as a <c>(key, value)</c> tuple.
+    ///
+    ///     The static interface hands entries out as tuples, so without this every call site
+    ///     would build a <see cref="KeyValuePair{TK,TV}" /> only to take it apart again. Both are
+    ///     reads of the two fields the enumerator already holds; this is the one that skips the
+    ///     intermediate.
+    /// </summary>
+    public readonly (TK, TV) CurrentEntry
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => (_current.Key, _current.Value);
+    }
+
     readonly object IEnumerator.Current => Current;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
