@@ -100,9 +100,14 @@ public sealed partial class Map<TK, TV> :
     }
 
 
+    /// Empty, but still comparing keys the way this map does. `Empty` is the
+    /// shared instance and carries the default comparer, so returning it here
+    /// would change what the map means the moment something was put back in.
     public Map<TK, TV> Clear()
     {
-        return Empty;
+        return ReferenceEquals(_comparer, EqualityComparer<TK>.Default)
+            ? Empty
+            : new Map<TK, TV>(_comparer);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -175,7 +180,9 @@ public sealed partial class Map<TK, TV> :
 
         if (!removed) return this;
 
-        if (newRoot == null) return Empty;
+        // `Clear`, not `Empty`: removing the last key must not swap the
+        // comparer out from under the map.
+        if (newRoot == null) return Clear();
 
         return new Map<TK, TV>(newRoot, _comparer, removed ? Count - 1 : Count);
     }
