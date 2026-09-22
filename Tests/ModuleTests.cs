@@ -78,7 +78,7 @@ public class ModuleTests
         Assert.Equal(2, MapModule.Count(big));
         Assert.False(MapModule.ContainsKey(big, "a"));
 
-        var total = MapModule.Fold<string, int, int>((acc, _, v) => acc + v, 0, map);
+        var total = MapModule.Fold<string, int, int>((_, v, acc) => acc + v, 0, map);
         Assert.Equal(6, total);
 
         var seen = 0;

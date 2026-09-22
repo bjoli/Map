@@ -15,8 +15,8 @@ namespace Map;
 ///     The static interface to <see cref="Map{TK, TV}" />.
 ///
 ///     Every operation takes the map explicitly, and the higher-order ones take the function
-///     first and the map last. Folds take the accumulator first, as a left fold does everywhere
-///     else in this codebase.
+///     first and the map last. A fold's callback takes the entry first and the accumulator last,
+///     as it does everywhere else in this codebase.
 ///
 ///     A callback is handed the key and the value as two arguments. That is what the trie's own
 ///     walk produces, so nothing is packed and unpacked to make the call. The exceptions are the
@@ -220,12 +220,12 @@ public static class MapModule
         map.Filter(predicate);
 
     // map-fold: folder state map
-    public static TState Fold<TK, TV, TState>(Func<TState, TK, TV, TState> folder, TState state, Map<TK, TV> map)
+    public static TState Fold<TK, TV, TState>(Func<TK, TV, TState, TState> folder, TState state, Map<TK, TV> map)
     {
         var current = state;
         map.Iter((k, v) =>
         {
-            current = folder(current, k, v);
+            current = folder(k, v, current);
             return true;
         });
         return current;
