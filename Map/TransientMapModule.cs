@@ -7,6 +7,9 @@
  *
  */
 
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
 namespace Map;
 
 /// <summary>
@@ -82,11 +85,9 @@ public static class TransientMapModule
     }
 
     // transientmap-try-ref, before the Option is put on in Bjolang
-    public static (bool found, TV value) TryGetValue<TK, TV>(TransientMap<TK, TV> map, TK key)
-    {
-        var found = map.TryGetValue(key, out var value);
-        return (found, value);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryGetValue<TK, TV>(TransientMap<TK, TV> map, TK key, [MaybeNullWhen(false)] out TV value) =>
+        map.TryGetValue(key, out value);
 
     // transientmap-contains?
     public static bool ContainsKey<TK, TV>(TransientMap<TK, TV> map, TK key) => map.ContainsKey(key);

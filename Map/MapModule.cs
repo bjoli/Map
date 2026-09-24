@@ -7,6 +7,7 @@
  *
  */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Map;
@@ -25,8 +26,11 @@ namespace Map;
 ///     <see cref="CursorCurrent{TK,TV}" /> answers one — a tuple is a structural type that any
 ///     language with tuples already has a name for, where a
 ///     <see cref="KeyValuePair{TKey,TValue}" /> or an <c>out</c> parameter is a C# idiom nothing
-///     else can call. A partial answer is a tuple for the same reason, with a leading
-///     <c>found</c> flag.
+///     else can call.
+///
+///     A partial answer is <c>bool TryXyz(..., out ...)</c>, the outs marked
+///     <c>[MaybeNullWhen(false)]</c>. Bjolang imports it with <c>(out T)</c> and gets an
+///     <c>Option</c>, so an out that is left as <c>default</c> on false is never read.
 /// </summary>
 public static class MapModule
 {
@@ -99,11 +103,9 @@ public static class MapModule
         map.TryGetValue(key, out var value) ? value : fallback;
 
     // map-try-ref, before the Option is put on in Bjolang
-    public static (bool found, TV value) TryGetValue<TK, TV>(Map<TK, TV> map, TK key)
-    {
-        var found = map.TryGetValue(key, out var value);
-        return (found, value);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryGetValue<TK, TV>(Map<TK, TV> map, TK key, [MaybeNullWhen(false)] out TV value) =>
+        map.TryGetValue(key, out value);
 
     // map-contains? / map-has-key?
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -248,12 +250,16 @@ public static class MapModule
     public static bool Exists<TK, TV>(Func<TK, TV, bool> predicate, Map<TK, TV> map) => map.Exists(predicate);
 
     /// <summary>
-    ///     The first entry satisfying <paramref name="predicate" />, in the trie's own order. A
-    ///     tuple with a leading flag rather than an exception: "nothing matched" is an answer a
+    ///     The first entry satisfying <paramref name="predicate" />, in the trie's own order.
+    ///     False rather than an exception when nothing matches: "nothing matched" is an answer a
     ///     caller can be handed rather than one it has to catch.
     /// </summary>
-    // map-find, before the Option is put on in Bjolang
-    public static (bool found, TK key, TV value) TryFind<TK, TV>(Func<TK, TV, bool> predicate, Map<TK, TV> map)
+    // map-find
+    public static bool TryFind<TK, TV>(
+        Func<TK, TV, bool> predicate,
+        Map<TK, TV> map,
+        [MaybeNullWhen(false)] out TK key,
+        [MaybeNullWhen(false)] out TV value)
     {
         var foundKey = default(TK);
         var foundValue = default(TV);
@@ -266,7 +272,9 @@ public static class MapModule
             return false;
         });
 
-        return (!ranToEnd, foundKey!, foundValue!);
+        key = foundKey;
+        value = foundValue;
+        return !ranToEnd;
     }
 
     // ---------------------------------------------------------

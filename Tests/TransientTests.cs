@@ -73,8 +73,9 @@ public class TransientTests
 
         Assert.Equal(3, TransientMapModule.Count(transient));
         Assert.True(TransientMapModule.ContainsKey(transient, "b"));
-        Assert.Equal((true, 3), TransientMapModule.TryGetValue(transient, "c"));
-        Assert.Equal((false, 0), TransientMapModule.TryGetValue(transient, "z"));
+        Assert.True(TransientMapModule.TryGetValue(transient, "c", out var c));
+        Assert.Equal(3, c);
+        Assert.False(TransientMapModule.TryGetValue(transient, "z", out _));
         Assert.Equal(7, TransientMapModule.RefOr(transient, "z", 7));
 
         TransientMapModule.FilterInPlace<string, int>((_, v) => v > 1, transient);

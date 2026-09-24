@@ -24,8 +24,9 @@ public class ModuleTests
         Assert.True(MapModule.IsEmpty(MapModule.Empty<string, int>()));
         Assert.Equal(2, MapModule.Ref(map, "b"));
         Assert.Equal(9, MapModule.RefOr(map, "z", 9));
-        Assert.Equal((true, 1), MapModule.TryGetValue(map, "a"));
-        Assert.Equal((false, 0), MapModule.TryGetValue(map, "z"));
+        Assert.True(MapModule.TryGetValue(map, "a", out var a));
+        Assert.Equal(1, a);
+        Assert.False(MapModule.TryGetValue(map, "z", out _));
         Assert.True(MapModule.ContainsKey(map, "c"));
         Assert.Equal(new[] { "a", "b", "c" }, MapModule.Keys(map).OrderBy(k => k));
         Assert.Equal(new[] { 1, 2, 3 }, MapModule.Values(map).OrderBy(v => v));
@@ -91,8 +92,9 @@ public class ModuleTests
         Assert.True(MapModule.Exists<string, int>((k, _) => k == "c", map));
         Assert.False(MapModule.Exists<string, int>((k, _) => k == "z", map));
 
-        Assert.Equal((true, "b", 2), MapModule.TryFind<string, int>((k, _) => k == "b", map));
-        Assert.Equal((false, null, 0), MapModule.TryFind<string, int>((k, _) => k == "z", map));
+        Assert.True(MapModule.TryFind<string, int>((k, _) => k == "b", map, out var key, out var value));
+        Assert.Equal(("b", 2), (key, value));
+        Assert.False(MapModule.TryFind<string, int>((k, _) => k == "z", map, out _, out _));
     }
 
     [Fact]
