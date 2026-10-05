@@ -38,10 +38,15 @@ public static class MapModule
     // Construction
     // ---------------------------------------------------------
 
+    /// <summary>What the map compares its keys with.</summary>
+    public static IEqualityComparer<TK> Comparer<TK, TV>(Map<TK, TV> map) => map.Comparer;
+
     // map-empty
     public static Map<TK, TV> Empty<TK, TV>(IEqualityComparer<TK>? comparer = null)
     {
-        return comparer is null ? Map<TK, TV>.Empty : new Map<TK, TV>(comparer);
+        return comparer is null || ReferenceEquals(comparer, EqualityComparer<TK>.Default)
+            ? Map<TK, TV>.Empty
+            : new Map<TK, TV>(comparer);
     }
 
     /// <summary>
@@ -188,7 +193,7 @@ public static class MapModule
     // map-map
     public static Map<TK, TV2> Map<TK, TV, TV2>(Func<TK, TV, TV2> mapper, Map<TK, TV> map)
     {
-        var builder = new MapBuilder<TK, TV2>(null, System.Math.Max(map.Count, 1));
+        var builder = new MapBuilder<TK, TV2>(map.Comparer, System.Math.Max(map.Count, 1));
         map.Iter((k, v) =>
         {
             builder.Add(k, mapper(k, v));
@@ -207,7 +212,7 @@ public static class MapModule
     // map-map-values
     public static Map<TK, TV2> MapValues<TK, TV, TV2>(Func<TV, TV2> mapper, Map<TK, TV> map)
     {
-        var builder = new MapBuilder<TK, TV2>(null, System.Math.Max(map.Count, 1));
+        var builder = new MapBuilder<TK, TV2>(map.Comparer, System.Math.Max(map.Count, 1));
         map.Iter((k, v) =>
         {
             builder.Add(k, mapper(v));

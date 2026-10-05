@@ -115,7 +115,8 @@ public sealed class MapBuilder<TK, TV>
     /// </summary>
     public Map<TK, TV> ToImmutable()
     {
-        if (_count == 0) return Map<TK, TV>.Empty;
+        // Empty, but still comparing keys the way this builder does.
+        if (_count == 0) return MapModule.Empty<TK, TV>(_comparer);
 
         var finalCount = 0;
         NodeBase root;
