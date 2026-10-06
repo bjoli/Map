@@ -387,16 +387,22 @@ public sealed partial class Map<TK, TV> :
     ///     An optional thunk called when keys conflict: (key, leftValue, rightValue) => resolvedValue.
     ///     Pass null to default to picking the right value (other overwrites this).
     /// </param>
+    /// <remarks>The result uses this map's comparer.</remarks>
     public Map<TK, TV> Merge(Map<TK, TV> other, Func<TK, TV, TV, TV>? conflictResolver = null)
     {
         if (other == null) throw new ArgumentNullException(nameof(other));
-        if (IsEmpty) return other;
         if (other.IsEmpty) return this;
+
+        // The tree merge needs both tries laid out by the same hashes.
+        if (!ReferenceEquals(_comparer, other._comparer) && !_comparer.Equals(other._comparer))
+            return MergeRehashed(other, conflictResolver);
+
+        if (IsEmpty) return new Map<TK, TV>(other._root, _comparer, other.Count);
 
         var newRoot = TrieOps.Merge(_root, other._root, 0, _comparer, conflictResolver);
 
         if (ReferenceEquals(_root, newRoot)) return this;
-        if (ReferenceEquals(other._root, newRoot)) return other;
+        if (ReferenceEquals(other._root, newRoot)) return new Map<TK, TV>(newRoot, _comparer, other.Count);
 
         // Recalculate size allocation-free via IterFast
         var counter = 0;
@@ -407,6 +413,21 @@ public sealed partial class Map<TK, TV> :
         });
 
         return new Map<TK, TV>(newRoot, _comparer, counter);
+    }
+
+    // Merge for a right side filed under another comparer: its entries are re-inserted one by
+    // one under this map's comparer. Right keys that this comparer equates meet as a conflict
+    // like any other, in the right map's enumeration order.
+    private Map<TK, TV> MergeRehashed(Map<TK, TV> other, Func<TK, TV, TV, TV>? conflictResolver)
+    {
+        var transient = ToTransient();
+        foreach (var kvp in other)
+            if (conflictResolver != null && transient.TryGetValue(kvp.Key, out var leftValue))
+                transient.Set(kvp.Key, conflictResolver(kvp.Key, leftValue, kvp.Value));
+            else
+                transient.Set(kvp.Key, kvp.Value);
+
+        return transient.ToImmutable();
     }
 
     public MapEnumerator<TK, TV> GetEnumerator()

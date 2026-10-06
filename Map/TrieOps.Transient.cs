@@ -43,6 +43,12 @@ internal static partial class TrieOps
         if (flags == NodeFlags.Collision)
         {
             var colNode = Unsafe.As<CollisionNode<TK, TV>>(node);
+            if (colNode.Hash != hash)
+            {
+                added = true;
+                return SplitCollision(colNode, key, value, hash, shift, ownerId);
+            }
+
             var slots = colNode.Slots;
 
             for (var i = 0; i < slots.Length; i++)
@@ -58,7 +64,7 @@ internal static partial class TrieOps
                     var updatedSlots = new DataSlot<TK, TV>[slots.Length];
                     slots.AsSpan().CopyTo(updatedSlots);
                     updatedSlots[i] = new DataSlot<TK, TV> { Key = key, Value = value };
-                    return new CollisionNode<TK, TV>(updatedSlots, ownerId);
+                    return new CollisionNode<TK, TV>(updatedSlots, hash, ownerId);
                 }
 
             added = true;
@@ -72,7 +78,7 @@ internal static partial class TrieOps
                 return node;
             }
 
-            return new CollisionNode<TK, TV>(appendedSlots, ownerId);
+            return new CollisionNode<TK, TV>(appendedSlots, hash, ownerId);
         }
 
         var bit = (hash >> shift) & 0x1F;
@@ -258,24 +264,26 @@ internal static partial class TrieOps
             var colNode = Unsafe.As<CollisionNode<TK, TV>>(node);
             var slots = colNode.Slots;
 
-            for (var i = 0; i < slots.Length; i++)
-                if (comparer.Equals(slots[i].Key, key))
-                {
-                    removed = true;
-                    if (slots.Length == 1) return null;
-
-                    var updatedSlots = new DataSlot<TK, TV>[slots.Length - 1];
-                    slots.AsSpan(0, i).CopyTo(updatedSlots);
-                    slots.AsSpan(i + 1).CopyTo(updatedSlots.AsSpan(i));
-
-                    if (isMutable)
+            if (colNode.Hash == hash)
+                for (var i = 0; i < slots.Length; i++)
+                    if (comparer.Equals(slots[i].Key, key))
                     {
-                        colNode.Slots = updatedSlots;
-                        return node;
-                    }
+                        removed = true;
+                        if (slots.Length == 1) return null;
+                        if (slots.Length == 2) return CollisionRemainder(slots[1 - i], hash, shift, ownerId);
 
-                    return new CollisionNode<TK, TV>(updatedSlots, ownerId);
-                }
+                        var updatedSlots = new DataSlot<TK, TV>[slots.Length - 1];
+                        slots.AsSpan(0, i).CopyTo(updatedSlots);
+                        slots.AsSpan(i + 1).CopyTo(updatedSlots.AsSpan(i));
+
+                        if (isMutable)
+                        {
+                            colNode.Slots = updatedSlots;
+                            return node;
+                        }
+
+                        return new CollisionNode<TK, TV>(updatedSlots, hash, ownerId);
+                    }
 
             removed = false;
             return node;

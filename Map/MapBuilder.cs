@@ -237,7 +237,8 @@ public sealed class MapBuilder<TK, TV>
             return leaf;
         }
 
-        if (span[0].Hash == span[^1].Hash) return BuildCollisionNode(span, comparer, ref finalCount);
+        // Sorted by hash, so equal ends mean one hash throughout.
+        if (span[0].Hash == span[^1].Hash) return BuildCollisionNode(span, shift, comparer, ref finalCount);
 
         uint dataMap = 0;
         uint nodeMap = 0;
@@ -272,8 +273,17 @@ public sealed class MapBuilder<TK, TV>
             }
             else
             {
-                nodeMap |= bitpos;
-                Unsafe.Add(ref nodeStart, nodeCount++) = BuildNode(groupSpan, shift + 5, comparer, ref finalCount);
+                var child = BuildNode(groupSpan, shift + 5, comparer, ref finalCount);
+                if (IsSingleSlot(child))
+                {
+                    dataMap |= bitpos;
+                    Unsafe.Add(ref dataStart, dataCount++) = NodeOps.GetLeafDataSpan<TK, TV>(child)[0];
+                }
+                else
+                {
+                    nodeMap |= bitpos;
+                    Unsafe.Add(ref nodeStart, nodeCount++) = child;
+                }
             }
 
             i = groupEnd;
@@ -303,11 +313,12 @@ public sealed class MapBuilder<TK, TV>
     }
 
     /// <summary>
-    ///     Handles the case where multiple keys have the same hash code.
-    ///     It creates a special "collision" node that just stores the items in a list.
+    ///     Builds the node at <paramref name="shift" /> for entries that all share one full hash.
+    ///     Duplicate keys collapse, last one winning. A single surviving key comes back as a
+    ///     one-slot leaf, which the caller lifts into its own data (see <see cref="IsSingleSlot" />).
     /// </summary>
-    private static NodeBase BuildCollisionNode(Span<BuilderEntry<TK, TV>> span, IEqualityComparer<TK> comparer,
-        ref int finalCount)
+    private static NodeBase BuildCollisionNode(Span<BuilderEntry<TK, TV>> span, int shift,
+        IEqualityComparer<TK> comparer, ref int finalCount)
     {
         // List is not very efficient, but we also don't build very many collisionNodes. 
         var slots = new List<DataSlot<TK, TV>>(span.Length);
@@ -335,7 +346,21 @@ public sealed class MapBuilder<TK, TV>
             }
         }
 
-        return new CollisionNode<TK, TV>(slots.ToArray(), OwnerId.None);
+        var hash = span[0].Hash;
+        if (slots.Count == 1)
+        {
+            var leaf = NodeOps.AllocateLeaf<TK, TV>(1, NodeFlags.None, OwnerId.None, 1u << ((hash >> shift) & 0x1F));
+            NodeOps.GetLeafDataSpan<TK, TV>(leaf)[0] = slots[0];
+            return leaf;
+        }
+
+        return new CollisionNode<TK, TV>(slots.ToArray(), hash, OwnerId.None);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsSingleSlot(NodeBase node)
+    {
+        return NodeOps.GetFlags(node.Meta) == NodeFlags.None && NodeOps.GetCapacity(node.Meta) == 1;
     }
 
     // This builds the smaller (below about 30_000 elements) champs
@@ -358,12 +383,18 @@ public sealed class MapBuilder<TK, TV>
             return leaf;
         }
 
-        // If we have shifted past 30, all 32 bits are exhausted. Any remaining items are collisions.
-        if (shift > 30) return BuildCollisionNode(source, comparer, ref finalCount);
-
         // Histogram the current 5-bit chunk
         Span<int> counts = stackalloc int[32];
-        for (var i = 0; i < source.Length; i++) counts[(source[i].Hash >> shift) & 0x1F]++;
+        var firstHash = source[0].Hash;
+        var sameHash = true;
+        for (var i = 0; i < source.Length; i++)
+        {
+            counts[(source[i].Hash >> shift) & 0x1F]++;
+            sameHash &= source[i].Hash == firstHash;
+        }
+
+        // One full hash throughout: a collision node here, not a chain of one-child nodes down to it.
+        if (sameHash) return BuildCollisionNode(source, shift, comparer, ref finalCount);
 
         // Calculate offsets and pre-compute the CHAMP bitmaps
         Span<int> starts = stackalloc int[32];
@@ -418,8 +449,18 @@ public sealed class MapBuilder<TK, TV>
                 var childSource = dest.Slice(starts[i], c);
                 var childDest = source.Slice(starts[i], c);
 
-                Unsafe.Add(ref nodeStart, nodeCount++) = BuildNodeRecursive(
-                    childSource, childDest, shift + 5, comparer, ref finalCount);
+                var child = BuildNodeRecursive(childSource, childDest, shift + 5, comparer, ref finalCount);
+                if (IsSingleSlot(child))
+                {
+                    // Duplicates collapsed to one key: file it here as data.
+                    nodeMap &= ~(1u << i);
+                    dataMap |= 1u << i;
+                    Unsafe.Add(ref dataStart, dataCount++) = NodeOps.GetLeafDataSpan<TK, TV>(child)[0];
+                }
+                else
+                {
+                    Unsafe.Add(ref nodeStart, nodeCount++) = child;
+                }
             }
         }
 
