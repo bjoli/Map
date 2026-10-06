@@ -58,8 +58,7 @@ internal static partial class TrieOps
             for (var i = 0; i < length; i++)
                 if (comparer.Equals(oldSlots[i].Key, key))
                 {
-                    // Is this optimization worth it? Probably not, but I left it in anyway.
-                    if (ReferenceEquals(oldSlots[i].Value, value))
+                    if (EqualityComparer<TV>.Default.Equals(oldSlots[i].Value, value))
                     {
                         added = false;
                         return node;
@@ -735,25 +734,98 @@ internal static partial class TrieOps
         return node;
     }
 
+    // Where the right side's keys went during a Merge. Each right key is counted exactly once:
+    // in Overlap (also on the left), in Added (not on the left), or inside a subtree listed in
+    // Shared (reused from both sides) or RightOnly (taken whole from the right). Subtrees are
+    // listed rather than counted, since nodes don't store their size; see MergedCount.
+    internal struct MergeTally
+    {
+        public int Overlap;
+        public int Added;
+        public PooledNodeList Shared;
+        public PooledNodeList RightOnly;
+
+        public void Return()
+        {
+            Shared.Return();
+            RightOnly.Return();
+        }
+    }
+
+    // Append-only node list on ArrayPool arrays. A big merge can list tens of thousands of
+    // subtrees, and a List would put that on the large object heap on every merge.
+    internal struct PooledNodeList
+    {
+        public NodeBase[]? Items;
+        public int Count;
+
+        public void Add(NodeBase node)
+        {
+            if (Items == null)
+            {
+                Items = ArrayPool<NodeBase>.Shared.Rent(16);
+            }
+            else if (Count == Items.Length)
+            {
+                var grown = ArrayPool<NodeBase>.Shared.Rent(Count * 2);
+                Items.AsSpan(0, Count).CopyTo(grown);
+                ArrayPool<NodeBase>.Shared.Return(Items, true);
+                Items = grown;
+            }
+
+            Items[Count++] = node;
+        }
+
+        public void Return()
+        {
+            if (Items == null) return;
+            Items.AsSpan(0, Count).Clear();
+            ArrayPool<NodeBase>.Shared.Return(Items);
+            Items = null;
+            Count = 0;
+        }
+    }
+
     /// <summary>
-    ///     Pure structural merge of two CHAMP nodes
+    ///     Pure structural merge of two CHAMP nodes. The result shares every subtree it can with
+    ///     node1 (and, without a resolver, with node2); node1 itself is returned when the right
+    ///     side adds or changes nothing.
     /// </summary>
     public static NodeBase? Merge<TK, TV>(
         NodeBase? node1,
         NodeBase? node2,
         int shift,
         IEqualityComparer<TK> comparer,
-        Func<TK, TV, TV, TV>? conflictResolver)
+        Func<TK, TV, TV, TV>? conflictResolver,
+        ref MergeTally tally)
     {
-        if (node1 == null) return node2;
+        if (node1 == null)
+        {
+            if (node2 != null) tally.RightOnly.Add(node2);
+            return node2;
+        }
+
         if (node2 == null) return node1;
+
+        // A subtree both maps share merges to itself. A resolver must still see each of its
+        // keys, so then it goes through the full merge.
+        if (conflictResolver == null && ReferenceEquals(node1, node2))
+        {
+            tally.Shared.Add(node1);
+            return node1;
+        }
 
         var flags1 = NodeOps.GetFlags(node1.Meta);
         var flags2 = NodeOps.GetFlags(node2.Meta);
 
-        // Fallback for hash collision nodes
-        if (flags1 == NodeFlags.Collision)
+        // Fallback for hash collision nodes. Unless node2 is internal, its slots are inserted
+        // into node1 (the branch after this one), so node1 comes back unchanged when the right
+        // side adds nothing.
+        if (flags1 == NodeFlags.Collision && flags2 == NodeFlags.Internal)
         {
+            // The result is node2 with col1's keys inserted: node2 counts as taken whole, and
+            // each match moves one key from Added to Overlap.
+            tally.RightOnly.Add(node2);
             var col1 = Unsafe.As<CollisionNode<TK, TV>>(node1);
             var current = node2;
             foreach (var slot in col1.Slots)
@@ -761,6 +833,8 @@ internal static partial class TrieOps
                 var h = comparer.GetHashCode(slot.Key!);
                 if (TryGetValueAt(node2, slot.Key, h, shift, comparer, out TV existingVal2))
                 {
+                    tally.Overlap++;
+                    tally.Added--;
                     var resolvedVal = conflictResolver != null
                         ? conflictResolver(slot.Key, slot.Value, existingVal2)
                         : existingVal2;
@@ -775,15 +849,18 @@ internal static partial class TrieOps
             return current;
         }
 
-        if (flags2 == NodeFlags.Collision)
+        if (flags2 == NodeFlags.Collision || flags1 == NodeFlags.Collision)
         {
-            var col2 = Unsafe.As<CollisionNode<TK, TV>>(node2);
+            var slots2 = flags2 == NodeFlags.Collision
+                ? Unsafe.As<CollisionNode<TK, TV>>(node2).Slots.AsSpan()
+                : NodeOps.GetLeafDataSpan<TK, TV>(node2);
             var current = node1;
-            foreach (var slot in col2.Slots)
+            foreach (var slot in slots2)
             {
                 var h = comparer.GetHashCode(slot.Key!);
                 if (TryGetValueAt(node1, slot.Key, h, shift, comparer, out TV existingVal1))
                 {
+                    tally.Overlap++;
                     var resolvedVal = conflictResolver != null
                         ? conflictResolver(slot.Key, existingVal1, slot.Value)
                         : slot.Value;
@@ -791,6 +868,7 @@ internal static partial class TrieOps
                 }
                 else
                 {
+                    tally.Added++;
                     current = Insert(current, slot.Key, slot.Value, h, shift, comparer, out _);
                 }
             }
@@ -825,6 +903,7 @@ internal static partial class TrieOps
                     tempMap &= ~bitpos;
                 }
 
+                tally.Added += BitOperations.PopCount(map2);
                 return newLeaf;
             }
         }
@@ -853,6 +932,8 @@ internal static partial class TrieOps
 
         var dataCount = 0;
         var nodeCount = 0;
+        // Whether the result differs from node1. Values compare like Insert does.
+        var changed = false;
         ulong finalDataMap = 0;
         ulong finalNodeMap = 0;
 
@@ -895,13 +976,16 @@ internal static partial class TrieOps
             // Case 2: Populated exclusively in tree 2
             else if (!(hasData1 || hasNode1) && (hasData2 || hasNode2))
             {
+                changed = true;
                 if (hasData2)
                 {
+                    tally.Added++;
                     pooledData[dataCount++] = d2;
                     finalDataMap |= bitpos;
                 }
                 else
                 {
+                    tally.RightOnly.Add(n2!);
                     pooledNodes[nodeCount++] = n2!;
                     finalNodeMap |= bitpos;
                 }
@@ -911,14 +995,26 @@ internal static partial class TrieOps
             {
                 if (comparer.Equals(d1.Key, d2.Key))
                 {
+                    tally.Overlap++;
                     var resolvedVal = conflictResolver != null
                         ? conflictResolver(d1.Key!, d1.Value!, d2.Value!)
                         : d2.Value;
-                    pooledData[dataCount++] = DataSlot<TK, TV>.Data(d1.Key!, resolvedVal!);
+                    if (EqualityComparer<TV>.Default.Equals(d1.Value, resolvedVal))
+                    {
+                        pooledData[dataCount++] = d1;
+                    }
+                    else
+                    {
+                        changed = true;
+                        pooledData[dataCount++] = DataSlot<TK, TV>.Data(d1.Key!, resolvedVal!);
+                    }
+
                     finalDataMap |= bitpos;
                 }
                 else
                 {
+                    tally.Added++;
+                    changed = true;
                     var h2 = comparer.GetHashCode(d2.Key!);
                     var subNode = MergeDataSlots(d1!, d2.Key, d2.Value, h2, shift + 5, comparer!);
                     pooledNodes[nodeCount++] = subNode;
@@ -928,9 +1024,10 @@ internal static partial class TrieOps
             // Case 4: Both elements contain internal sub-nodes
             else if (hasNode1 && hasNode2)
             {
-                var subNode = Merge(n1, n2, shift + 5, comparer, conflictResolver);
+                var subNode = Merge(n1, n2, shift + 5, comparer, conflictResolver, ref tally);
                 if (subNode != null)
                 {
+                    if (!ReferenceEquals(subNode, n1)) changed = true;
                     pooledNodes[nodeCount++] = subNode;
                     finalNodeMap |= bitpos;
                 }
@@ -943,9 +1040,10 @@ internal static partial class TrieOps
                 var microLeaf = NodeOps.AllocateLeaf<TK, TV>(1, NodeFlags.None, 0, bitposNext);
                 NodeOps.GetLeafDataSpan<TK, TV>(microLeaf)[0] = d1;
 
-                var mergedSubNode = Merge(microLeaf, n2, shift + 5, comparer, conflictResolver);
+                var mergedSubNode = Merge(microLeaf, n2, shift + 5, comparer, conflictResolver, ref tally);
                 if (mergedSubNode != null)
                 {
+                    changed = true;
                     pooledNodes[nodeCount++] = mergedSubNode;
                     finalNodeMap |= bitpos;
                 }
@@ -957,13 +1055,21 @@ internal static partial class TrieOps
                 var microLeaf = NodeOps.AllocateLeaf<TK, TV>(1, NodeFlags.None, 0, bitposNext);
                 NodeOps.GetLeafDataSpan<TK, TV>(microLeaf)[0] = d2;
 
-                var mergedSubNode = Merge(n1, microLeaf, shift + 5, comparer, conflictResolver);
+                var mergedSubNode = Merge(n1, microLeaf, shift + 5, comparer, conflictResolver, ref tally);
                 if (mergedSubNode != null)
                 {
+                    if (!ReferenceEquals(mergedSubNode, n1)) changed = true;
                     pooledNodes[nodeCount++] = mergedSubNode;
                     finalNodeMap |= bitpos;
                 }
             }
+        }
+
+        if (!changed)
+        {
+            ArrayPool<DataSlot<TK, TV>>.Shared.Return(pooledData);
+            ArrayPool<NodeBase>.Shared.Return(pooledNodes);
+            return node1;
         }
 
         NodeBase resultNode;
@@ -989,6 +1095,47 @@ internal static partial class TrieOps
         ArrayPool<NodeBase>.Shared.Return(pooledNodes);
 
         return resultNode;
+    }
+
+    // Key count of a Merge result: left + Added + |RightOnly|, or equally
+    // left + right - Overlap - |Shared|. Only one subtree list needs counting, so both are
+    // walked in lockstep and the first one exhausted decides; the cost is about twice the
+    // smaller list. Returns the tally's pooled arrays.
+    public static int MergedCount<TK, TV>(int leftCount, int rightCount, ref MergeTally tally)
+    {
+        var count = CountMerged<TK, TV>(leftCount, rightCount, tally);
+        tally.Return();
+        return count;
+    }
+
+    private static int CountMerged<TK, TV>(int leftCount, int rightCount, in MergeTally tally)
+    {
+        if (tally.Shared.Count == 0) return leftCount + rightCount - tally.Overlap;
+        if (tally.RightOnly.Count == 0) return leftCount + tally.Added;
+
+        var sharedWalk = new Stack<NodeBase>(new ArraySegment<NodeBase>(tally.Shared.Items!, 0, tally.Shared.Count));
+        var rightOnlyWalk =
+            new Stack<NodeBase>(new ArraySegment<NodeBase>(tally.RightOnly.Items!, 0, tally.RightOnly.Count));
+        int sharedKeys = 0, rightOnlyKeys = 0;
+        while (true)
+        {
+            if (sharedWalk.Count == 0) return leftCount + rightCount - tally.Overlap - sharedKeys;
+            if (rightOnlyWalk.Count == 0) return leftCount + tally.Added + rightOnlyKeys;
+            sharedKeys += CountStep<TK, TV>(sharedWalk);
+            rightOnlyKeys += CountStep<TK, TV>(rightOnlyWalk);
+        }
+    }
+
+    // Pops one node, pushes its children, returns the keys held directly in it.
+    private static int CountStep<TK, TV>(Stack<NodeBase> walk)
+    {
+        var node = walk.Pop();
+        var flags = NodeOps.GetFlags(node.Meta);
+        if (flags == NodeFlags.Collision) return Unsafe.As<CollisionNode<TK, TV>>(node).Slots.Length;
+        if (flags == NodeFlags.Internal)
+            foreach (var child in NodeOps.GetChildSpan<TK, TV>(node))
+                walk.Push(child);
+        return BitOperations.PopCount((uint)node.Map);
     }
 
     public static bool Iter<TK, TV>(NodeBase? node, Func<TK, TV, bool> action)

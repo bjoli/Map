@@ -399,20 +399,16 @@ public sealed partial class Map<TK, TV> :
 
         if (IsEmpty) return new Map<TK, TV>(other._root, _comparer, other.Count);
 
-        var newRoot = TrieOps.Merge(_root, other._root, 0, _comparer, conflictResolver);
+        var tally = new TrieOps.MergeTally();
+        var newRoot = TrieOps.Merge(_root, other._root, 0, _comparer, conflictResolver, ref tally);
 
-        if (ReferenceEquals(_root, newRoot)) return this;
-        if (ReferenceEquals(other._root, newRoot)) return new Map<TK, TV>(newRoot, _comparer, other.Count);
-
-        // Recalculate size allocation-free via IterFast
-        var counter = 0;
-        TrieOps.Iter<TK, TV>(newRoot, (_, _) =>
+        if (ReferenceEquals(_root, newRoot) || ReferenceEquals(other._root, newRoot))
         {
-            counter++;
-            return true;
-        });
+            tally.Return();
+            return ReferenceEquals(_root, newRoot) ? this : new Map<TK, TV>(newRoot, _comparer, other.Count);
+        }
 
-        return new Map<TK, TV>(newRoot, _comparer, counter);
+        return new Map<TK, TV>(newRoot, _comparer, TrieOps.MergedCount<TK, TV>(Count, other.Count, ref tally));
     }
 
     // Merge for a right side filed under another comparer: its entries are re-inserted one by
