@@ -292,7 +292,14 @@ internal static partial class TrieOps
     public static bool TryGetValue<TK, TV>(NodeBase? node, TK key, int hash, IEqualityComparer<TK> comparer,
         out TV value)
     {
-        var shift = 0;
+        return TryGetValueAt(node, key, hash, 0, comparer, out value);
+    }
+
+    // Lookup in a subtree whose root sits at depth `shift`.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryGetValueAt<TK, TV>(NodeBase? node, TK key, int hash, int shift,
+        IEqualityComparer<TK> comparer, out TV value)
+    {
         var current = node;
 
         while (current != null)
@@ -698,7 +705,7 @@ internal static partial class TrieOps
             foreach (var slot in col1.Slots)
             {
                 var h = comparer.GetHashCode(slot.Key!);
-                if (TryGetValue(node2, slot.Key, h, comparer, out TV existingVal2))
+                if (TryGetValueAt(node2, slot.Key, h, shift, comparer, out TV existingVal2))
                 {
                     var resolvedVal = conflictResolver != null
                         ? conflictResolver(slot.Key, slot.Value, existingVal2)
@@ -721,7 +728,7 @@ internal static partial class TrieOps
             foreach (var slot in col2.Slots)
             {
                 var h = comparer.GetHashCode(slot.Key!);
-                if (TryGetValue(node1, slot.Key, h, comparer, out TV existingVal1))
+                if (TryGetValueAt(node1, slot.Key, h, shift, comparer, out TV existingVal1))
                 {
                     var resolvedVal = conflictResolver != null
                         ? conflictResolver(slot.Key, existingVal1, slot.Value)

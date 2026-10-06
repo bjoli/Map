@@ -15,6 +15,14 @@ namespace Map;
 
 internal static partial class TrieOps
 {
+    // A node copied into the transient gets its own data array, since owned nodes have their
+    // slots written in place and the source node is still part of a persistent map.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static DataSlot<TK, TV>[]? CloneData<TK, TV>(DataSlot<TK, TV>[]? data)
+    {
+        return data == null || data.Length == 0 ? data : (DataSlot<TK, TV>[])data.Clone();
+    }
+
     // Well, if you thought the immutable Insert, this is actually the same, but it checks if the instance of TransientMap that 
     // had Insert called on it owns the node.
     public static NodeBase InsertTransient<TK, TV>(NodeBase? node, TK key, TV value, int hash, int shift,
@@ -146,7 +154,7 @@ internal static partial class TrieOps
                 var dataArray = NodeOps.GetDataArray<TK, TV>(node);
                 var childCap = NodeOps.GetCapacity(node.Meta);
                 var newNodeObj = NodeOps.AllocateInternal<TK, TV>(childCap, NodeFlags.Internal, ownerId, node.Map);
-                Unsafe.As<InternalNode1<TK, TV>>(newNodeObj).Data = dataArray;
+                Unsafe.As<InternalNode1<TK, TV>>(newNodeObj).Data = CloneData(dataArray);
 
                 var childSpan0 = NodeOps.GetChildSpan<TK, TV>(node);
                 var newChildSpan = NodeOps.GetChildSpan<TK, TV>(newNodeObj);
@@ -348,7 +356,8 @@ internal static partial class TrieOps
 
                     var newNodeObj = NodeOps.AllocateInternal<TK, TV>((byte)(childCap - 1),
                         NodeFlags.Internal, ownerId, newMap);
-                    Unsafe.As<InternalNode1<TK, TV>>(newNodeObj).Data = dataArray;
+                    Unsafe.As<InternalNode1<TK, TV>>(newNodeObj).Data =
+                        isMutable ? dataArray : CloneData(dataArray);
 
                     var childSpan = NodeOps.GetChildSpan<TK, TV>(node);
                     var newChildSpan = NodeOps.GetChildSpan<TK, TV>(newNodeObj);
@@ -400,7 +409,7 @@ internal static partial class TrieOps
 
                 var updatedNodeObj =
                     NodeOps.AllocateInternal<TK, TV>(childCap, NodeFlags.Internal, ownerId, node.Map);
-                Unsafe.As<InternalNode1<TK, TV>>(updatedNodeObj).Data = dataArray;
+                Unsafe.As<InternalNode1<TK, TV>>(updatedNodeObj).Data = CloneData(dataArray);
 
                 var childSpanOld = NodeOps.GetChildSpan<TK, TV>(node);
                 var updatedChildSpan = NodeOps.GetChildSpan<TK, TV>(updatedNodeObj);
