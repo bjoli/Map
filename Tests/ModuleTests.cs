@@ -98,12 +98,12 @@ public class ModuleTests
     }
 
     [Fact]
-    public void Cursor_AdvancesInCursorDone()
+    public void Cursor_AdvancesInCursorNext()
     {
-        var cursor = MapModule.Cursor(Sample());
         var seen = new List<(string, int)>();
 
-        while (!MapModule.CursorDone(cursor)) seen.Add(MapModule.CursorCurrent(cursor));
+        for (var c = MapModule.Cursor(Sample()); !MapModule.CursorDone(c); c = MapModule.CursorNext(c))
+            seen.Add(MapModule.CursorCurrent(c));
 
         Assert.Equal(new[] { ("a", 1), ("b", 2), ("c", 3) }, seen.OrderBy(e => e.Item1));
     }

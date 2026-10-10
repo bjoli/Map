@@ -286,37 +286,18 @@ public static class MapModule
     // Walking
     // ---------------------------------------------------------
 
+    /// <summary>The cursor on the first entry of the map, or a done cursor.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static MapCursor<TK, TV> Cursor<TK, TV>(Map<TK, TV> map) => new MapCursor<TK, TV>(map);
+    public static MapCursor<TK, TV> Cursor<TK, TV>(Map<TK, TV> map) => MapCursor<TK, TV>.Start(map.Root);
 
-    /// <summary>
-    ///     Advances the cursor, and answers whether it ran off the end.
-    ///
-    ///     The advance happens here rather than in a step of its own: a walk asks "is there
-    ///     more?" exactly once per entry, so folding the two together is what lets the whole
-    ///     traversal allocate nothing after the cursor itself.
-    /// </summary>
+    /// <summary>True when the cursor is past the last entry. Does not move the cursor.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool CursorDone<TK, TV>(MapCursor<TK, TV> cursor) => !cursor.Enumerator.MoveNext();
+    public static bool CursorDone<TK, TV>(MapCursor<TK, TV> cursor) => cursor.Done;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static (TK, TV) CursorCurrent<TK, TV>(MapCursor<TK, TV> cursor) => cursor.Enumerator.CurrentEntry;
-}
+    public static (TK, TV) CursorCurrent<TK, TV>(MapCursor<TK, TV> cursor) => cursor.Current;
 
-/// <summary>
-///     A position in a walk of a <see cref="Map{TK, TV}" />.
-///
-///     <see cref="MapEnumerator{TK, TV}" /> is a struct, which is what keeps a <c>foreach</c>
-///     allocation-free — and exactly what makes it useless to a caller that has to *hold* the
-///     position, since every copy advances independently. This is that struct in a heap cell:
-///     one allocation for the walk, none per entry.
-/// </summary>
-public sealed class MapCursor<TK, TV>
-{
-    public MapEnumerator<TK, TV> Enumerator;
-
-    public MapCursor(Map<TK, TV> map)
-    {
-        Enumerator = map.GetEnumerator();
-    }
+    /// <summary>The cursor on the next entry. The cursor given does not change.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MapCursor<TK, TV> CursorNext<TK, TV>(MapCursor<TK, TV> cursor) => cursor.Next();
 }

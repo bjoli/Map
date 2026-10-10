@@ -21,6 +21,7 @@ public sealed partial class Map<TK, TV> :
     public static readonly Map<TK, TV> Empty = new(null, EqualityComparer<TK>.Default);
     private readonly IEqualityComparer<TK> _comparer;
     private readonly NodeBase? _root;
+    internal NodeBase? Root => _root;
 
     public Map(IEqualityComparer<TK> comparer)
     {
