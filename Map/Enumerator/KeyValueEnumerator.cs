@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Map;
 
+[NonUserCode]
 public struct MapKeyEnumerator<TK, TV> : IEnumerator<TK>
 {
     private MapEnumerator<TK, TV> _inner;
@@ -33,6 +34,7 @@ public struct MapKeyEnumerator<TK, TV> : IEnumerator<TK>
     }
 }
 
+[NonUserCode]
 public struct MapValueEnumerator<TK, TV> : IEnumerator<TV>
 {
     private MapEnumerator<TK, TV> _inner;
@@ -63,6 +65,7 @@ public struct MapValueEnumerator<TK, TV> : IEnumerator<TV>
     }
 }
 
+[NonUserCode]
 public readonly struct MapKeyCollection<TK, TV> : IReadOnlyCollection<TK>
 {
     private readonly NodeBase? _root;
@@ -91,6 +94,7 @@ public readonly struct MapKeyCollection<TK, TV> : IReadOnlyCollection<TK>
     }
 }
 
+[NonUserCode]
 public readonly struct MapValueCollection<TK, TV> : IReadOnlyCollection<TV>
 {
     private readonly NodeBase? _root;

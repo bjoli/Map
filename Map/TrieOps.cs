@@ -738,6 +738,7 @@ internal static partial class TrieOps
     // in Overlap (also on the left), in Added (not on the left), or inside a subtree listed in
     // Shared (reused from both sides) or RightOnly (taken whole from the right). Subtrees are
     // listed rather than counted, since nodes don't store their size; see MergedCount.
+    [NonUserCode]
     internal struct MergeTally
     {
         public int Overlap;
@@ -754,6 +755,7 @@ internal static partial class TrieOps
 
     // Append-only node list on ArrayPool arrays. A big merge can list tens of thousands of
     // subtrees, and a List would put that on the large object heap on every merge.
+    [NonUserCode]
     internal struct PooledNodeList
     {
         public NodeBase[]? Items;

@@ -16,6 +16,7 @@ namespace Map;
 // I had a weird edge case though, where a small value type and a reference type ended up with the pointer 
 // being unaligned and shit got slow
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
+[NonUserCode]
 internal struct DataSlot<TK, TV>
 {
     public TK Key;
@@ -38,6 +39,7 @@ internal enum NodeFlags : byte
 
 // This is just a thread safe way to generate ids for the map. id = 0 is reserved for 
 // immutable objects.
+[NonUserCode]
 internal static class OwnerId
 {
     // This is a pretty conservative batch size. If I set my 16 core 9950x processor to waste as many IDs at it can

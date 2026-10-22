@@ -15,6 +15,7 @@ namespace Map;
 ///     A mutable, transient version of a <see cref="Map{TK, TV}" /> that can be efficiently modified
 ///     before being converted back to an immutable map.
 /// </summary>
+[NonUserCode]
 public sealed class TransientMap<TK, TV>
 {
     private readonly IEqualityComparer<TK> _comparer;

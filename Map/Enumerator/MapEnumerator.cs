@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Map;
 
+[NonUserCode]
 internal struct StackFrame
 {
     public NodeBase Node;
@@ -11,11 +12,13 @@ internal struct StackFrame
 }
 
 [InlineArray(8)]
+[NonUserCode]
 internal struct EnumeratorStack
 {
     private StackFrame _element0;
 }
 
+[NonUserCode]
 public struct MapEnumerator<TK, TV> : IEnumerator<KeyValuePair<TK, TV>>
 {
     private EnumeratorStack _stack;

@@ -155,7 +155,7 @@ public sealed partial class Map<TK, TV> :
 
     public Map<TK, TV> AddRange(IEnumerable<KeyValuePair<TK, TV>> range)
     {
-        var newMap = Mutate(transient =>
+        var newMap = Mutate([NonUserCode] (transient) =>
         {
             foreach (var kvp in range) transient.Set(kvp.Key, kvp.Value);
         });
@@ -164,7 +164,7 @@ public sealed partial class Map<TK, TV> :
 
     public Map<TK, TV> RemoveRange(IEnumerable<TK> range)
     {
-        var newMap = Mutate(transient =>
+        var newMap = Mutate([NonUserCode] (transient) =>
         {
             foreach (var k in range) transient.Remove(k);
         });
@@ -252,7 +252,7 @@ public sealed partial class Map<TK, TV> :
     public Map<TK, TV> Filter(Func<TK, TV, bool> predicate)
     {
         var builder = new MapBuilder<TK, TV>(_comparer);
-        Iter((k, v) =>
+        Iter([NonUserCode] (k, v) =>
         {
             if (predicate(k, v)) builder.Add(k, v);
             return true;
@@ -271,7 +271,7 @@ public sealed partial class Map<TK, TV> :
     public Map<TNk, TNv> MapCar<TNk, TNv>(Func<TK, TV, (TNk, TNv)> action, IEqualityComparer<TNk>? comparer = null)
     {
         var builder = new MapBuilder<TNk, TNv>(comparer);
-        Iter((k, v) =>
+        Iter([NonUserCode] (k, v) =>
         {
             var (nk, nv) = action(k, v);
             builder.Add(nk, nv);
@@ -290,7 +290,7 @@ public sealed partial class Map<TK, TV> :
     /// <returns>The final accumulated state.</returns>
     public TState FoldValues<TState>(TState seed, Func<TState, TV, TState> action)
     {
-        Iter((_, v) =>
+        Iter([NonUserCode] (_, v) =>
         {
             seed = action(seed, v);
             return true;
@@ -307,7 +307,7 @@ public sealed partial class Map<TK, TV> :
     /// <returns>The final accumulated state.</returns>
     public TState FoldKeys<TState>(TState seed, Func<TState, TK, TState> action)
     {
-        Iter((k, _) =>
+        Iter([NonUserCode] (k, _) =>
         {
             seed = action(seed, k);
             return true;
@@ -324,7 +324,7 @@ public sealed partial class Map<TK, TV> :
     {
         // `Iter` reports whether it ran to the *end*, so a walk that never stopped is a walk
         // that never matched. The outer negation is what turns "no match" into an answer.
-        return !Iter((k, v) => !pred(k, v));
+        return !Iter([NonUserCode] (k, v) => !pred(k, v));
     }
 
     /// <summary>
@@ -337,7 +337,7 @@ public sealed partial class Map<TK, TV> :
     {
         var key = default(TK);
         var found = false;
-        Iter((k, _) =>
+        Iter([NonUserCode] (k, _) =>
         {
             if (pred(k))
             {
@@ -360,7 +360,7 @@ public sealed partial class Map<TK, TV> :
     /// <param name="action">The action to execute on each key-value pair.</param>
     public void ForEach(Action<TK, TV> action)
     {
-        Iter((k, v) =>
+        Iter([NonUserCode] (k, v) =>
         {
             action(k, v);
             return true;

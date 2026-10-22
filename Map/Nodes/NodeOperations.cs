@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 
 namespace Map;
 
+[NonUserCode]
 internal static class NodeOps
 {
     public static (byte capacity, NodeFlags flags, ulong ownerId) UnpackMeta(ulong meta)

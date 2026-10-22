@@ -2,6 +2,7 @@ namespace Map;
 
 // Holds only keys whose full hash equals Hash. A key with another hash splits the node instead
 // of joining it (see TrieOps.SplitCollision).
+[NonUserCode]
 internal sealed class CollisionNode<TK, TV> : NodeBase
 {
     public readonly int Hash;

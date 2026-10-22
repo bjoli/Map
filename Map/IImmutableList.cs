@@ -39,7 +39,7 @@ public sealed partial class Map<TK, TV> :
 
     bool IImmutableDictionary<TK, TV>.Contains(KeyValuePair<TK, TV> kvp)
     {
-        return Exists((k, v) =>
+        return Exists([NonUserCode] (k, v) =>
             EqualityComparer<TK>.Default.Equals(k, kvp.Key) && EqualityComparer<TV>.Default.Equals(v, kvp.Value));
     }
 
@@ -60,7 +60,7 @@ public sealed partial class Map<TK, TV> :
 
     IImmutableDictionary<TK, TV> IImmutableDictionary<TK, TV>.SetItems(IEnumerable<KeyValuePair<TK, TV>> kvPairs)
     {
-        var newMap = Mutate(transient =>
+        var newMap = Mutate([NonUserCode] (transient) =>
         {
             foreach (var kvp in kvPairs) transient.Set(kvp.Key, kvp.Value);
         });

@@ -13,6 +13,7 @@ namespace Map;
 
 // Explicit implementation of IEnumerable to satisfy the interfaces
 
+[NonUserCode]
 public sealed partial class Map<TK,TV>  :
     IEnumerable<KeyValuePair<TK,TV>>
 {

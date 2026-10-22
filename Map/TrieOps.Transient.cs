@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 
 namespace Map;
 
+[NonUserCode]
 internal static partial class TrieOps
 {
     // A node copied into the transient gets its own data array, since owned nodes have their

@@ -18,18 +18,21 @@ namespace Map;
 // to get stack-allocated arrays of a fixed size (32).
 // This is faster than heap allocation for temporary buffers.
 [InlineArray(32)]
+[NonUserCode]
 internal struct DataSlotBuffer<TK, TV>
 {
     private DataSlot<TK, TV> _element0;
 }
 
 [InlineArray(32)]
+[NonUserCode]
 internal struct NodeBaseBuffer
 {
     private NodeBase _element0;
 }
 
 // A temporary storage for key-value pairs and their hash codes.
+[NonUserCode]
 internal struct BuilderEntry<TK, TV>
 {
     public int Hash;
@@ -42,6 +45,7 @@ internal struct BuilderEntry<TK, TV>
 ///     It's more efficient to add items to this builder first and then
 ///     convert it to a Map in one go, rather than creating a new Map for each addition.
 /// </summary>
+[NonUserCode]
 public sealed class MapBuilder<TK, TV>
 {
     private readonly IEqualityComparer<TK> _comparer;

@@ -17,6 +17,7 @@ namespace Map;
 ///     trie per entry. It is the fast way to make a map out of *nothing*; a transient is the fast
 ///     way to make one out of another map.
 /// </summary>
+[NonUserCode]
 public static class MapBuilderModule
 {
     // mapbuilder-empty
@@ -35,7 +36,7 @@ public static class MapBuilderModule
     public static MapBuilder<TK, TV> FromMap<TK, TV>(Map<TK, TV> map)
     {
         var builder = new MapBuilder<TK, TV>(map.Comparer, map.Count < 1 ? 1 : map.Count);
-        map.Iter((key, value) =>
+        map.Iter([NonUserCode] (key, value) =>
         {
             builder.Add(key, value);
             return true;

@@ -32,6 +32,7 @@ namespace Map;
 ///     <c>[MaybeNullWhen(false)]</c>. Bjolang imports it with <c>(out T)</c> and gets an
 ///     <c>Option</c>, so an out that is left as <c>default</c> on false is never read.
 /// </summary>
+[NonUserCode]
 public static class MapModule
 {
     // ---------------------------------------------------------
@@ -194,7 +195,7 @@ public static class MapModule
     public static Map<TK, TV2> Map<TK, TV, TV2>(Func<TK, TV, TV2> mapper, Map<TK, TV> map)
     {
         var builder = new MapBuilder<TK, TV2>(map.Comparer, System.Math.Max(map.Count, 1));
-        map.Iter((k, v) =>
+        map.Iter([NonUserCode] (k, v) =>
         {
             builder.Add(k, mapper(k, v));
             return true;
@@ -213,7 +214,7 @@ public static class MapModule
     public static Map<TK, TV2> MapValues<TK, TV, TV2>(Func<TV, TV2> mapper, Map<TK, TV> map)
     {
         var builder = new MapBuilder<TK, TV2>(map.Comparer, System.Math.Max(map.Count, 1));
-        map.Iter((k, v) =>
+        map.Iter([NonUserCode] (k, v) =>
         {
             builder.Add(k, mapper(v));
             return true;
@@ -230,7 +231,7 @@ public static class MapModule
     public static TState Fold<TK, TV, TState>(Func<TK, TV, TState, TState> folder, TState state, Map<TK, TV> map)
     {
         var current = state;
-        map.Iter((k, v) =>
+        map.Iter([NonUserCode] (k, v) =>
         {
             current = folder(k, v, current);
             return true;
@@ -269,7 +270,7 @@ public static class MapModule
         var foundKey = default(TK);
         var foundValue = default(TV);
 
-        var ranToEnd = map.Iter((k, v) =>
+        var ranToEnd = map.Iter([NonUserCode] (k, v) =>
         {
             if (!predicate(k, v)) return true;
             foundKey = k;

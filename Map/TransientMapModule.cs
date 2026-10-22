@@ -21,6 +21,7 @@ namespace Map;
 ///     owns the nodes it has touched and <see cref="ToPersistent{TK,TV}" /> hands the result back
 ///     in O(1).
 /// </summary>
+[NonUserCode]
 public static class TransientMapModule
 {
     // ---------------------------------------------------------
@@ -130,7 +131,7 @@ public static class TransientMapModule
     public static void FilterInPlace<TK, TV>(Func<TK, TV, bool> predicate, TransientMap<TK, TV> map)
     {
         var doomed = new List<TK>();
-        map.Iter((key, value) =>
+        map.Iter([NonUserCode] (key, value) =>
         {
             if (!predicate(key, value)) doomed.Add(key);
             return true;
