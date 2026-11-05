@@ -171,6 +171,9 @@ public static class MapModule
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Map<TK, TV> Merge<TK, TV>(Map<TK, TV> map, Map<TK, TV> other) => map.Merge(other);
 
+    // (std parallel)'s chunks: about k maps that hold each entry once, sharing the nodes
+    public static Map<TK, TV>[] Split<TK, TV>(Map<TK, TV> map, int k) => map.Split(k);
+
     /// <summary>
     ///     The same, with the collisions decided by <paramref name="resolver" />, which is handed
     ///     the key, the left value and the right one.

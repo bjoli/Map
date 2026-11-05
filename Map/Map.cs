@@ -27,28 +27,29 @@ public sealed partial class Map<TK, TV> :
     {
         _root = null;
         _comparer = comparer;
-        Count = 0;
+        _count = 0;
     }
 
     public Map()
     {
         _root = null;
         _comparer = EqualityComparer<TK>.Default;
-        Count = 0;
+        _count = 0;
     }
 
     private Map(NodeBase? root, IEqualityComparer<TK> comparer)
     {
         _root = root;
         _comparer = comparer;
-        Count = 0;
+        _count = 0;
     }
 
+    // A count of -1: not counted yet, see Count.
     internal Map(NodeBase? root, IEqualityComparer<TK> comparer, int count)
     {
         _root = root;
         _comparer = comparer;
-        Count = count;
+        _count = count;
     }
 
     public bool IsEmpty => Count == 0;
@@ -77,7 +78,19 @@ public sealed partial class Map<TK, TV> :
     public MapKeyCollection<TK, TV> Keys => new(_root, Count);
     public MapValueCollection<TK, TV> Values => new(_root, Count);
 
-    public int Count { get; }
+    // -1 until counted: a part made by Split is counted when its count is first asked for,
+    // which is in the part's own fiber rather than in the split. Written at most once, with
+    // the same value by every thread that writes it, so the race is benign.
+    private int _count;
+
+    public int Count => _count >= 0 ? _count : CountNow();
+
+    private int CountNow()
+    {
+        var n = _root == null ? 0 : TrieSplit<TK, TV>.CountTree(_root);
+        _count = n;
+        return n;
+    }
 
     public TV this[TK key] => Get(key);
 
@@ -100,6 +113,23 @@ public sealed partial class Map<TK, TV> :
         return TrieOps.TryGetValue(_root, key, hash, _comparer, out value);
     }
 
+
+    /// <summary>
+    ///     About <paramref name="k" /> maps that together hold each entry of this one once, under
+    ///     the same comparer. They share this map's nodes. Fewer when there are fewer entries,
+    ///     and at least one: this map, when it is empty or <paramref name="k" /> is 1 or less.
+    ///     The parts are balanced by the trie's shape, so their sizes are close when the hashes
+    ///     are spread, and the split costs about k nodes, not a walk. A part's count is taken
+    ///     the first time it is asked for.
+    /// </summary>
+    public Map<TK, TV>[] Split(int k)
+    {
+        var pieces = TrieSplit<TK, TV>.Split(_root, Count, k);
+        if (pieces.Length == 1) return [this];
+        var parts = new Map<TK, TV>[pieces.Length];
+        for (var i = 0; i < pieces.Length; i++) parts[i] = new Map<TK, TV>(pieces[i], _comparer, -1);
+        return parts;
+    }
 
     /// Empty, but still comparing keys the way this map does. `Empty` is the
     /// shared instance and carries the default comparer, so returning it here
